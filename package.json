@@ -1,6 +1,6 @@
 {
   "name": "@dwg7/maplibre-gl-atlas",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Print a multi-sheet map atlas via the browser's native print pipeline — a MapLibre GL JS control.",
   "type": "module",
   "main": "./dist/maplibre-gl-atlas.cjs",

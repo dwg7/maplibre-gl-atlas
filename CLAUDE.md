@@ -37,6 +37,12 @@ MapLibre GL JS用の`map.addControl()`スタイルのコントロール。ブラ
 - `bearing`(完全サポート、正射影の画面内回転)、`pitch`(APIとしては残すが、
   透視投影による縮尺不整合を警告する——README参照)。
 - 組み込みトリガーボタン(`showButton`、既定true)。
+- `review()`——印刷前に「どこを・何枚」を確認・調整できる対話的ステップ。
+  組み込みボタンの既定の入口(`confirm`、既定true)。`sheets`と`decorate`と
+  同じく、`AtlasSheet`の既存フィールド(`bounds`/`headerLeft`/`headerRight`/
+  `role`/`orientation`)だけで構成し、グリッド概念を持ち込まない——
+  `print()`/`prepare()`自体は変更せず、プログラム的な呼び出しには確認が
+  割り込まない([adr/0002](adr/0002-print-review-step.md))。
 
 ### 恒久的に除外する(このライブラリが将来も持たない)
 
@@ -64,6 +70,11 @@ MapLibre GL JS用の`map.addControl()`スタイルのコントロール。ブラ
 - **`role`は注釈であって分岐条件ではない**。「detail/indexという語彙を
   API に持ち込む」ことと「コントロールがそれに応じて挙動を変える」ことは
   独立の決定であり、v1では前者のみ採用する(DECISIONS.md D4参照)。
+- **対話的な確認(`review()`)も`AtlasSheet`の既存フィールドだけで実現する**。
+  「どこを・何枚刷るか」を見せる機能であっても、グリッド・行列という概念を
+  新たに持ち込まない——`bounds`/`headerLeft`/`headerRight`/`role`/
+  `orientation`という、`sheets`が元々返す情報の範囲内で完結させる
+  (DECISIONS.md D6、adr/0002参照)。
 - **ポート元のバグ修正を退行させない**。オフスクリーンステージングの
   `position:fixed;opacity:0`(`left:-99999px`にしない)、`object-fit:contain`
   (`fill`にしない)は、いずれもdwg7/zukakuで実機バグとして踏んだ末の修正

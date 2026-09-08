@@ -11,16 +11,20 @@ MapLibre GL JSコントロールとして切り出した。この移行計画3PR
 PR 3: `scripts/render/page.html`の移行)はまだ着手していない。
 
 - スコープ・設計原則は[CLAUDE.md](CLAUDE.md)参照。
-- API設計・命名の経緯は[DECISIONS.md](DECISIONS.md)・[adr/0001](adr/0001-window-print-not-jspdf.md)参照。
+- API設計・命名の経緯は[DECISIONS.md](DECISIONS.md)・[adr/0001](adr/0001-window-print-not-jspdf.md)・
+  [adr/0002](adr/0002-print-review-step.md)参照。
 - `src/`構成: `index.ts`(`AtlasControl`本体)・`strategy.ts`(印刷戦略・
   `@page`生成)・`layout.ts`(マージン・ヘッダー/フッターCSS生成)・
   `render-scale.ts`(ズームレベルシフト)・`snapshot.ts`(オフスクリーン
-  スナップショット)・`types.ts`(公開型)。
+  スナップショット)・`review.ts`(印刷前の確認・調整パネル、2026-09-08
+  追加)・`types.ts`(公開型)。
 - テスト: `tests/strategy.test.ts`・`tests/layout.test.ts`・
-  `tests/render-scale.test.ts`(Vitest、ブラウザ不要な純粋関数のみ)。
+  `tests/render-scale.test.ts`・`tests/review.test.ts`(Vitest)。
   `snapshot.ts`(実際のMapLibreインスタンス構築)はvitest/jsdomではWebGL
   コンテキストが無いため単体テスト対象外——計画(§6)通り、実ブラウザ/
-  Playwrightでの検証にゆだねる。
+  Playwrightでの検証にゆだねる。`review.ts`は地図操作をモック
+  (`ReviewMapLike`)で代替しているため、パネルのロジック自体は
+  Vitestで検証できている。
 - サンプル: [examples/basic/index.html](examples/basic/index.html)
   (ビルド不要、`https://demotiles.maplibre.org/style.json`を使うためAPI
   キー不要。詳細シート3枚+索引シート1枚)。
@@ -88,14 +92,35 @@ Playwrightだけでは検出できなかった類のバグ(コンストラクタ
 原因)。実際のユーザー操作(タブがフォアグラウンドの状態でボタンを押す)
 では発生しない、検証ツール特有の現象。
 
+## 2026-09-08: `review()`(印刷前の確認・調整ステップ)を追加
+
+「印刷ボタンを押したら即座に全ページ印刷」では実用にならない、という指摘
+(どの範囲をどう印刷するかはユーザーが決めたい)を受けて追加。設計の詳細は
+[adr/0002](adr/0002-print-review-step.md)参照。組み込みボタンは既定で
+`review()`(チェックボックス付きの一覧パネル+`bounds`を持つシートを
+ライブ地図上にハイライト)を開くようになった。`print()`/`prepare()`自体は
+無変更——`AtlasControlOptions.confirm: false`でボタンを従来通りの直接印刷に
+戻せる。
+
+**テスト方法論の追記**: Claude Browserプレビューペインで実機検証中、
+1つのタブで大量のデバッグ用MapLibreインスタンス(`import("maplibre-gl")`
+経由の使い捨てmap等)を`.remove()`せずに作り続けた結果、そのタブの
+WebGLコンテキストが枯渇し、以後そのタブで新規に作る`AtlasControl`の
+オフスクリーンmapが`load`イベントを一切発火しなくなる(ハングしたように
+見える)現象に遭遇した。ライブラリのバグではなく、**同一タブでの
+使い捨てデバッグ用map作成は`.remove()`を徹底するか、こまめに新しいタブに
+切り替える**べき、という検証時の教訓。実際、新しいタブで同じ操作をやり直すと
+即座に正常完走した。
+
 ## 次にやること
 
 1. **実ブラウザでの手動検証**(macOS Chromium系・Windows Edge/Chrome、
    計画§6の最低ライン)。`examples/basic/index.html`および
    [docs/index.html](docs/index.html)のライブデモを使う。Claude Browserの
-   プレビューペインでのクリックスルー検証は完了(上記のsetProjection修正が
-   これで見つかった)が、macOS/Windowsの実機・実ブラウザでの確認は
-   まだ行っていない。
+   プレビューペインでのクリックスルー検証は完了(setProjection修正・
+   スケールバー修正・`review()`の一覧表示/チェックボックス調整/確認/
+   キャンセルの一通りの動作を確認済み)が、macOS/Windowsの実機・実ブラウザ
+   での確認はまだ行っていない。
 2. **zukaku側PR 2**: `docs/index.html`(対話的印刷パス)をこのライブラリの
    消費に切り替える。`computePages()`はそのまま残し、
    `sheets: () => [...]`に変換、索引シートに`role:"index"`・
@@ -123,6 +148,10 @@ Playwrightだけでは検出できなかった類のバグ(コンストラクタ
   このリポジトリのスコープ外——zukaku側PR 2着手時に判断。
 - bearing対応のzukaku側`computePages()`一般化: 着手していない、
   完全に別issueとして扱う前提のまま。
+- `review()`パネルの見た目・配置(固定位置、`top-right`寄り)・
+  `center`+`zoom`のみのシートを地図上にハイライトしない、という判断
+  ([adr/0002](adr/0002-print-review-step.md)参照)は実装時の判断。
+  パネルの見た目そのものは人間による実機レビューをまだ受けていない。
 
 ## 既知の制約・注意点
 

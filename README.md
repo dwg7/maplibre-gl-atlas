@@ -88,9 +88,17 @@ map.addControl(
 );
 ```
 
-Clicking the control's print button (or calling `atlasControl.print()`
-yourself, e.g. from your own UI with `showButton: false`) builds the print
-DOM and opens the browser's print dialog. See
+Clicking the control's print button opens an interactive **review panel**
+first (how many sheets, where each one is — outlined on the live map for
+sheets with `bounds` — with a checkbox to drop any before printing). This is
+what most users need: they decide what actually gets printed, not just how
+many pages a caller pre-computed. Set `confirm: false` if your own UI already
+lets people choose what to print and this step would be redundant — the
+button then calls `print()` directly, same as before. Calling
+`atlasControl.print()`/`.prepare()` yourself (e.g. from your own UI with
+`showButton: false`, or headlessly via Playwright) never shows the review
+panel either way — see [adr/0002](adr/0002-print-review-step.md). Both build
+the print DOM and (for `print()`) open the browser's print dialog. See
 [`examples/basic/index.html`](examples/basic/index.html) for a complete,
 runnable page (3 detail sheets + 1 index sheet, no build step, no API key —
 it uses [stars.optgeo.org](https://stars.optgeo.org)'s `positron` style, the
@@ -106,7 +114,8 @@ class AtlasControl implements IControl {
   constructor(options: AtlasControlOptions);
   onAdd(map: MapLibreMap): HTMLElement;
   onRemove(): void;
-  print(): Promise<void>;   // build the print DOM, then window.print()
+  review(): Promise<void>;  // show the review panel; prints the user-confirmed subset, or nothing on cancel
+  print(): Promise<void>;   // build the print DOM, then window.print() — never shows the review panel
   prepare(): Promise<void>; // build the print DOM only — for driving via Playwright's page.pdf() instead
   cleanup(): void;
 }
@@ -120,6 +129,7 @@ interface AtlasControlOptions {
   margin?: number | { top: number; right: number; bottom: number; left: number }; // mm, default 15
   strategy?: "auto" | "mixed" | "rotate"; // default "auto"
   showButton?: boolean;      // default true
+  confirm?: boolean;         // default true — button opens review() instead of calling print() directly
   injectStyles?: boolean;    // default true
   onBeforePrint?: () => void | Promise<void>;
   onAfterPrint?: () => void | Promise<void>;

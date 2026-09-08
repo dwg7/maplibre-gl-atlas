@@ -167,6 +167,19 @@ export interface AtlasControlOptions {
   showButton?: boolean;
 
   /**
+   * Whether the built-in button opens the interactive `review()` panel
+   * (letting the user see how many sheets will print and where, and
+   * deselect any before proceeding) instead of calling `print()` directly.
+   * Set to `false` if your own UI already lets the user choose what to
+   * print and the confirmation step would just be redundant. Has no effect
+   * on `print()`/`prepare()` themselves — calling those directly never
+   * shows the review panel, so programmatic/headless callers (e.g. a
+   * Playwright-driven `prepare()`) are unaffected either way.
+   * @default true
+   */
+  confirm?: boolean;
+
+  /**
    * Whether AtlasControl injects the `<style>` element its print layout
    * needs. Set to `false` if you'd rather own that (e.g. to inline it into
    * a build step) — see layout.ts/strategy.ts for the CSS it would

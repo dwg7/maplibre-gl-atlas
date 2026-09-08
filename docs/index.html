@@ -52,26 +52,30 @@
   // coverage, so it renders anywhere, unlike zukaku's Japan-only styles.
   const DEMO_STYLE = "https://stars.optgeo.org/style/positron";
 
-  // A hand-picked 1x3 strip over western Europe, split into three detail
+  // A hand-picked 1x3 strip over central Sapporo, split into three detail
   // sheets plus one index sheet covering all three — deliberately not using
   // any grid-computation helper, since this library has no such concept
   // (see CLAUDE.md). A real caller (like dwg7/zukaku) would compute these
   // bounds from a UI-driven grid instead of hardcoding them.
   const cells = [
-    { ref: "A1", bounds: [[-5, 45], [0, 50]] },
-    { ref: "A2", bounds: [[0, 45], [5, 50]] },
-    { ref: "A3", bounds: [[5, 45], [10, 50]] },
+    { ref: "A1", bounds: [[141.34, 43.05], [141.35, 43.075]] },
+    { ref: "A2", bounds: [[141.35, 43.05], [141.36, 43.075]] },
+    { ref: "A3", bounds: [[141.36, 43.05], [141.37, 43.075]] },
   ];
   const overviewBounds = [
-    [-5, 45],
-    [10, 50],
+    [141.34, 43.05],
+    [141.37, 43.075],
   ];
 
   const map = new Map({
     container: "map",
     style: DEMO_STYLE,
-    center: [2.5, 47.5],
-    zoom: 4,
+    center: [141.3545, 43.0621],
+    zoom: 15,
+    // Namespaced hash ("#map=z/lat/lng/...") so the URL is shareable without
+    // clobbering any other app state that might share the fragment — the
+    // pattern dwg7/zukaku and dwg7/height-coverage already use.
+    hash: "map",
   });
 
   map.addControl(

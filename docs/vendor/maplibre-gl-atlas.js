@@ -1,20 +1,20 @@
-var w = Object.defineProperty;
-var $ = (t, e, n) => e in t ? w(t, e, { enumerable: !0, configurable: !0, writable: !0, value: n }) : t[e] = n;
-var g = (t, e, n) => $(t, typeof e != "symbol" ? e + "" : e, n);
-import { Map as v, ScaleControl as E } from "maplibre-gl";
-const x = { width: 210, height: 297 }, c = 15;
-function u(t) {
-  return t ?? x;
+var L = Object.defineProperty;
+var P = (n, t, e) => t in n ? L(n, t, { enumerable: !0, configurable: !0, writable: !0, value: e }) : n[t] = e;
+var p = (n, t, e) => P(n, typeof t != "symbol" ? t + "" : t, e);
+import { Map as M, ScaleControl as R, LngLatBounds as N } from "maplibre-gl";
+const _ = { width: 210, height: 297 }, g = 15;
+function x(n) {
+  return n ?? _;
 }
-function C(t) {
-  return t == null ? { top: c, right: c, bottom: c, left: c } : typeof t == "number" ? { top: t, right: t, bottom: t, left: t } : {
-    top: t.top ?? c,
-    right: t.right ?? c,
-    bottom: t.bottom ?? c,
-    left: t.left ?? c
+function A(n) {
+  return n == null ? { top: g, right: g, bottom: g, left: g } : typeof n == "number" ? { top: n, right: n, bottom: n, left: n } : {
+    top: n.top ?? g,
+    right: n.right ?? g,
+    bottom: n.bottom ?? g,
+    left: n.left ?? g
   };
 }
-function P() {
+function k() {
   return `
 #maplibre-gl-atlas-print-root { display: none; }
 @media print {
@@ -29,13 +29,13 @@ function P() {
 }
 `;
 }
-function M(t) {
-  const e = C(t), n = e.top / 3, r = e.top / 3, a = e.bottom / 5;
+function B(n) {
+  const t = A(n), e = t.top / 3, i = t.top / 3, o = t.bottom / 5;
   return `
 @media print {
   #maplibre-gl-atlas-print-root .print-page-inner .print-map {
     position: absolute;
-    top: ${e.top}mm; left: ${e.left}mm; right: ${e.right}mm; bottom: ${e.bottom}mm;
+    top: ${t.top}mm; left: ${t.left}mm; right: ${t.right}mm; bottom: ${t.bottom}mm;
     box-sizing: border-box;
     border: 0.75pt solid #000;
     overflow: hidden;
@@ -45,259 +45,448 @@ function M(t) {
   }
   #maplibre-gl-atlas-print-root .print-page-inner .print-header {
     position: absolute;
-    top: 0; left: ${e.left}mm; right: ${e.right}mm; height: ${e.top}mm;
+    top: 0; left: ${t.left}mm; right: ${t.right}mm; height: ${t.top}mm;
     display: flex;
     align-items: center;
     justify-content: space-between;
   }
-  #maplibre-gl-atlas-print-root .print-page-inner .print-brand { font: bold ${n}mm/1 sans-serif; color: #222; }
-  #maplibre-gl-atlas-print-root .print-page-inner .print-ref { font: bold ${r}mm/1 sans-serif; color: #222; text-align: right; }
+  #maplibre-gl-atlas-print-root .print-page-inner .print-brand { font: bold ${e}mm/1 sans-serif; color: #222; }
+  #maplibre-gl-atlas-print-root .print-page-inner .print-ref { font: bold ${i}mm/1 sans-serif; color: #222; text-align: right; }
   #maplibre-gl-atlas-print-root .print-page-inner .print-footer {
     position: absolute;
-    bottom: 0; left: ${e.left}mm; right: ${e.right}mm; height: ${e.bottom}mm;
+    bottom: 0; left: ${t.left}mm; right: ${t.right}mm; height: ${t.bottom}mm;
     display: flex;
     align-items: center;
   }
-  #maplibre-gl-atlas-print-root .print-page-inner .print-footer .maplibregl-ctrl-scale { margin: 0; font-size: ${a}mm; }
+  #maplibre-gl-atlas-print-root .print-page-inner .print-footer .maplibregl-ctrl-scale { margin: 0; font-size: ${o}mm; }
 }
 `;
 }
-function S(t) {
-  const e = t ?? (typeof navigator < "u" ? navigator : void 0);
-  if (!e) return !1;
-  const n = e.userAgentData;
-  return n && n.platform ? n.platform === "Windows" : /Windows/i.test(e.userAgent || "");
+function z(n) {
+  const t = n ?? (typeof navigator < "u" ? navigator : void 0);
+  if (!t) return !1;
+  const e = t.userAgentData;
+  return e && e.platform ? e.platform === "Windows" : /Windows/i.test(t.userAgent || "");
 }
-function A() {
-  return S() ? "rotate" : "mixed";
+function D() {
+  return z() ? "rotate" : "mixed";
 }
-function N(t) {
-  return !t || t === "auto" ? A() : t;
+function E(n) {
+  return !n || n === "auto" ? D() : n;
 }
-function R(t) {
-  const e = t.filter((n) => n === "landscape").length;
-  return e > t.length - e ? "landscape" : "portrait";
+function O(n) {
+  const t = n.filter((e) => e === "landscape").length;
+  return t > n.length - t ? "landscape" : "portrait";
 }
-function z(t) {
+function T(n) {
   return {
-    width: Math.min(t.width, t.height),
-    height: Math.max(t.width, t.height)
+    width: Math.min(n.width, n.height),
+    height: Math.max(n.width, n.height)
   };
 }
-function L(t, e) {
-  const { width: n, height: r } = z(u(t));
-  return e === "mixed" ? `
-@page atlas-portrait { size: ${n}mm ${r}mm; margin: 0; }
-@page atlas-landscape { size: ${r}mm ${n}mm; margin: 0; }
+function j(n, t) {
+  const { width: e, height: i } = T(x(n));
+  return t === "mixed" ? `
+@page atlas-portrait { size: ${e}mm ${i}mm; margin: 0; }
+@page atlas-landscape { size: ${i}mm ${e}mm; margin: 0; }
 @media print {
-  #maplibre-gl-atlas-print-root.strategy-mixed .print-page.portrait-page { page: atlas-portrait; width: ${n}mm; height: ${r}mm; }
-  #maplibre-gl-atlas-print-root.strategy-mixed .print-page.landscape-page { page: atlas-landscape; width: ${r}mm; height: ${n}mm; }
+  #maplibre-gl-atlas-print-root.strategy-mixed .print-page.portrait-page { page: atlas-portrait; width: ${e}mm; height: ${i}mm; }
+  #maplibre-gl-atlas-print-root.strategy-mixed .print-page.landscape-page { page: atlas-landscape; width: ${i}mm; height: ${e}mm; }
   #maplibre-gl-atlas-print-root.strategy-mixed .print-page-inner { position: absolute; inset: 0; }
 }
 ` : `
-@page atlas-base-portrait { size: ${n}mm ${r}mm; margin: 0; }
-@page atlas-base-landscape { size: ${r}mm ${n}mm; margin: 0; }
+@page atlas-base-portrait { size: ${e}mm ${i}mm; margin: 0; }
+@page atlas-base-landscape { size: ${i}mm ${e}mm; margin: 0; }
 @media print {
-  #maplibre-gl-atlas-print-root.strategy-rotate.base-portrait .print-page { page: atlas-base-portrait; width: ${n}mm; height: ${r}mm; }
-  #maplibre-gl-atlas-print-root.strategy-rotate.base-landscape .print-page { page: atlas-base-landscape; width: ${r}mm; height: ${n}mm; }
-  #maplibre-gl-atlas-print-root.strategy-rotate .print-page-inner.portrait-page { width: ${n}mm; height: ${r}mm; }
-  #maplibre-gl-atlas-print-root.strategy-rotate .print-page-inner.landscape-page { width: ${r}mm; height: ${n}mm; }
+  #maplibre-gl-atlas-print-root.strategy-rotate.base-portrait .print-page { page: atlas-base-portrait; width: ${e}mm; height: ${i}mm; }
+  #maplibre-gl-atlas-print-root.strategy-rotate.base-landscape .print-page { page: atlas-base-landscape; width: ${i}mm; height: ${e}mm; }
+  #maplibre-gl-atlas-print-root.strategy-rotate .print-page-inner.portrait-page { width: ${e}mm; height: ${i}mm; }
+  #maplibre-gl-atlas-print-root.strategy-rotate .print-page-inner.landscape-page { width: ${i}mm; height: ${e}mm; }
   #maplibre-gl-atlas-print-root.strategy-rotate .print-page-inner:not(.rotated) { position: absolute; top: 0; left: 0; }
   #maplibre-gl-atlas-print-root.strategy-rotate.base-portrait .print-page-inner.rotated {
-    position: absolute; top: 0; left: ${n}mm;
+    position: absolute; top: 0; left: ${e}mm;
     transform-origin: 0 0; transform: rotate(90deg);
   }
   #maplibre-gl-atlas-print-root.strategy-rotate.base-landscape .print-page-inner.rotated {
-    position: absolute; top: 0; left: ${r}mm;
+    position: absolute; top: 0; left: ${i}mm;
     transform-origin: 0 0; transform: rotate(90deg);
   }
 }
 `;
 }
-const _ = 96, O = 25.4;
-function f(t) {
-  return t * _ / O;
+const F = 96, I = 25.4;
+function $(n) {
+  return n * F / I;
 }
-function T(t, e) {
-  const n = u(t), r = Math.min(n.width, n.height), a = Math.max(n.width, n.height), s = f(r), i = f(a);
-  return e === "landscape" ? { width: Math.round(i), height: Math.round(s) } : { width: Math.round(s), height: Math.round(i) };
+function H(n, t) {
+  const e = x(n), i = Math.min(e.width, e.height), o = Math.max(e.width, e.height), a = $(i), r = $(o);
+  return t === "landscape" ? { width: Math.round(r), height: Math.round(a) } : { width: Math.round(a), height: Math.round(r) };
 }
-function B(t, e, n) {
-  const r = T(t, e);
-  return n ? {
-    width: r.width * n.x,
-    height: r.height * n.y
-  } : r;
+function U(n, t, e) {
+  const i = H(n, t);
+  return e ? {
+    width: i.width * e.x,
+    height: i.height * e.y
+  } : i;
 }
-async function D(t, e) {
-  const n = t.orientation === "landscape" ? "landscape" : "portrait", r = B(e, n, t.renderScale), a = document.createElement("div");
-  a.setAttribute("aria-hidden", "true"), a.setAttribute("data-maplibre-gl-atlas-stage", ""), a.style.cssText = `position:fixed; top:0; left:0; opacity:0; pointer-events:none; width:${r.width}px; height:${r.height}px;`, document.body.appendChild(a);
-  const s = {
-    container: a,
-    style: t.style,
-    bearing: t.bearing ?? 0,
-    pitch: t.pitch ?? 0,
+async function W(n, t) {
+  const e = n.orientation === "landscape" ? "landscape" : "portrait", i = U(t, e, n.renderScale), o = document.createElement("div");
+  o.setAttribute("aria-hidden", "true"), o.setAttribute("data-maplibre-gl-atlas-stage", ""), o.style.cssText = `position:fixed; top:0; left:0; opacity:0; pointer-events:none; width:${i.width}px; height:${i.height}px;`, document.body.appendChild(o);
+  const a = {
+    container: o,
+    style: n.style,
+    bearing: n.bearing ?? 0,
+    pitch: n.pitch ?? 0,
     interactive: !1,
     attributionControl: !1,
     fadeDuration: 0
   };
-  t.bounds ? (s.bounds = t.bounds, s.fitBoundsOptions = { padding: t.padding ?? 0, animate: !1 }) : (s.center = t.center, s.zoom = t.zoom);
-  const i = new v(s);
-  i.addControl(new E({ maxWidth: 100, unit: "metric" }), "bottom-left");
+  n.bounds ? (a.bounds = n.bounds, a.fitBoundsOptions = { padding: n.padding ?? 0, animate: !1 }) : (a.center = n.center, a.zoom = n.zoom);
+  const r = new M(a);
+  r.addControl(new R({ maxWidth: 100, unit: "metric" }), "bottom-left");
   try {
-    await new Promise((o, d) => {
-      i.on("error", (h) => d(h.error ?? h)), i.on("load", () => {
-        var h;
-        i.setProjection({ type: "mercator" }), t.terrain || i.setTerrain(null), Promise.resolve((h = t.decorate) == null ? void 0 : h.call(t, i)).then(() => {
-          i.once("idle", () => o());
-        }).catch(d);
+    await new Promise((l, m) => {
+      r.on("error", (u) => m(u.error ?? u)), r.on("load", () => {
+        var u;
+        r.setProjection({ type: "mercator" }), n.terrain || r.setTerrain(null), Promise.resolve((u = n.decorate) == null ? void 0 : u.call(n, r)).then(() => {
+          r.once("idle", () => l());
+        }).catch(m);
       });
     });
-    const p = i.getCanvas().toDataURL("image/png"), l = i.getContainer().querySelector(".maplibregl-ctrl-scale");
-    if (l && t.renderScale) {
-      const o = Math.max(t.renderScale.x, t.renderScale.y), d = parseFloat(l.style.width);
-      Number.isNaN(d) || (l.style.width = `${d / o}px`);
+    const d = r.getCanvas().toDataURL("image/png"), c = r.getContainer().querySelector(".maplibregl-ctrl-scale");
+    if (c && n.renderScale) {
+      const l = Math.max(n.renderScale.x, n.renderScale.y), m = parseFloat(c.style.width);
+      Number.isNaN(m) || (c.style.width = `${m / l}px`);
     }
-    const m = l ? l.outerHTML : "";
-    return { dataUrl: p, scaleHtml: m, orientation: n };
+    const h = c ? c.outerHTML : "";
+    return { dataUrl: d, scaleHtml: h, orientation: e };
   } finally {
-    i.remove(), a.remove();
+    r.remove(), o.remove();
   }
 }
-const b = "maplibre-gl-atlas-print-root";
-class U {
-  constructor(e) {
-    g(this, "options");
-    g(this, "container");
-    g(this, "printRoot");
-    g(this, "styleEl");
+const f = "__maplibre-gl-atlas-review__", y = "__maplibre-gl-atlas-review-lines__", w = "__maplibre-gl-atlas-review-labels__", s = "maplibre-gl-atlas-review-panel";
+class G {
+  constructor(t) {
+    p(this, "options");
+    p(this, "rows", []);
+    p(this, "panel");
+    p(this, "countEl");
+    p(this, "confirmButton");
+    p(this, "previouslyFocused");
+    p(this, "onKeyDown", (t) => {
+      t.key === "Escape" && this.cancel();
+    });
+    p(this, "disposed", !1);
+    this.options = t, this.previouslyFocused = document.activeElement, this.panel = document.createElement("div"), this.panel.className = s, this.panel.setAttribute("role", "dialog"), this.panel.setAttribute("aria-label", "Review atlas before printing"), this.panel.setAttribute("tabindex", "-1");
+    const e = document.createElement("div");
+    e.className = `${s}-header`;
+    const i = document.createElement("strong");
+    i.textContent = "Review atlas", this.countEl = document.createElement("span"), this.countEl.className = `${s}-count`, e.append(i, this.countEl);
+    const o = document.createElement("ul");
+    o.className = `${s}-list`, t.sheets.forEach((d, c) => {
+      const h = document.createElement("li"), l = document.createElement("label"), m = document.createElement("input");
+      m.type = "checkbox", m.checked = !0, m.addEventListener("change", () => this.handleToggle());
+      const u = document.createElement("span");
+      u.className = `${s}-label`, u.textContent = v(d, c);
+      const b = document.createElement("span");
+      b.className = `${s}-orientation`, b.textContent = q(d), l.append(m, u, b), h.appendChild(l), o.appendChild(h), this.rows.push({ sheet: d, checkbox: m });
+    });
+    const a = document.createElement("div");
+    a.className = `${s}-actions`;
+    const r = document.createElement("button");
+    r.type = "button", r.className = `${s}-cancel`, r.textContent = "Cancel", r.addEventListener("click", () => this.cancel()), this.confirmButton = document.createElement("button"), this.confirmButton.type = "button", this.confirmButton.className = `${s}-confirm`, this.confirmButton.addEventListener("click", () => this.confirm()), a.append(r, this.confirmButton), this.panel.append(e, o, a), document.body.appendChild(this.panel), document.addEventListener("keydown", this.onKeyDown), this.addMapOverlay(), this.handleToggle(), this.panel.focus();
+  }
+  handleToggle() {
+    const t = this.rows.filter((e) => e.checkbox.checked);
+    this.countEl.textContent = `${t.length} / ${this.rows.length} sheets selected`, this.confirmButton.textContent = `Print ${t.length} sheet${t.length === 1 ? "" : "s"}`, this.confirmButton.disabled = t.length === 0, this.updateMapOverlay();
+  }
+  confirm() {
+    if (this.disposed) return;
+    const t = this.rows.filter((e) => e.checkbox.checked).map((e) => e.sheet);
+    this.dispose(), this.options.onConfirm(t);
+  }
+  cancel() {
+    this.disposed || (this.dispose(), this.options.onCancel());
+  }
+  addMapOverlay() {
+    const t = this.options.map;
+    t && (t.addSource(f, { type: "geojson", data: this.overlayGeoJson() }), t.addLayer({
+      id: y,
+      type: "line",
+      source: f,
+      paint: {
+        "line-color": "#1a73e8",
+        "line-width": ["case", ["get", "included"], 2.5, 1],
+        "line-opacity": ["case", ["get", "included"], 1, 0.3]
+      }
+    }), t.addLayer({
+      id: w,
+      type: "symbol",
+      source: f,
+      layout: {
+        "text-field": ["get", "label"],
+        "text-size": 14,
+        "symbol-placement": "point"
+      },
+      paint: {
+        "text-color": "#1a73e8",
+        "text-halo-color": "#fff",
+        "text-halo-width": 1.5,
+        "text-opacity": ["case", ["get", "included"], 1, 0.3]
+      }
+    }));
+  }
+  updateMapOverlay() {
+    var i;
+    const t = this.options.map;
+    if (!t) return;
+    const e = t.getSource(f);
+    (i = e == null ? void 0 : e.setData) == null || i.call(e, this.overlayGeoJson());
+  }
+  overlayGeoJson() {
+    const t = [];
+    return this.rows.forEach(({ sheet: e, checkbox: i }, o) => {
+      const a = J(e.bounds);
+      if (!a) return;
+      const r = K(a);
+      t.push({
+        type: "Feature",
+        properties: { included: i.checked, label: v(e, o) },
+        geometry: { type: "Polygon", coordinates: [a] }
+      }), t.push({
+        type: "Feature",
+        properties: { included: i.checked, label: v(e, o) },
+        geometry: { type: "Point", coordinates: r }
+      });
+    }), { type: "FeatureCollection", features: t };
+  }
+  /** Removes the panel DOM, the map overlay (if any), and the Escape listener. Idempotent. */
+  dispose() {
+    if (this.disposed) return;
+    this.disposed = !0, this.panel.remove(), document.removeEventListener("keydown", this.onKeyDown);
+    const t = this.options.map;
+    t && (t.getLayer(w) && t.removeLayer(w), t.getLayer(y) && t.removeLayer(y), t.getSource(f) && t.removeSource(f)), this.previouslyFocused instanceof HTMLElement && this.previouslyFocused.focus();
+  }
+}
+function q(n) {
+  return n.orientation === "landscape" ? "landscape" : "portrait";
+}
+function v(n, t) {
+  const e = [n.headerLeft, n.headerRight].filter((i) => !!i);
+  return e.length ? e.join(" — ") : n.role ? `${n.role} ${t + 1}` : `Sheet ${t + 1}`;
+}
+function J(n) {
+  if (!n) return null;
+  const t = N.convert(n), e = t.getWest(), i = t.getSouth(), o = t.getEast(), a = t.getNorth();
+  return [
+    [e, a],
+    [o, a],
+    [o, i],
+    [e, i],
+    [e, a]
+  ];
+}
+function K(n) {
+  const t = n.map((i) => i[0]), e = n.map((i) => i[1]);
+  return [(Math.min(...t) + Math.max(...t)) / 2, (Math.min(...e) + Math.max(...e)) / 2];
+}
+function Y() {
+  return `
+.${s} {
+  position: fixed; top: 10px; right: 10px; z-index: 10;
+  width: 260px; max-height: calc(100vh - 20px); overflow-y: auto;
+  background: #fff; color: #222; border-radius: 6px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  font: 13px/1.4 system-ui, sans-serif;
+  padding: 10px;
+}
+.${s}-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.${s}-count { color: #555; font-size: 12px; }
+.${s}-list { list-style: none; margin: 0 0 10px; padding: 0; }
+.${s}-list li { border-bottom: 1px solid #eee; }
+.${s}-list label { display: flex; align-items: center; gap: 6px; padding: 6px 2px; cursor: pointer; }
+.${s}-label { flex: 1; }
+.${s}-orientation { color: #888; font-size: 11px; }
+.${s}-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.${s}-actions button { font: inherit; padding: 6px 12px; border-radius: 4px; border: 1px solid #ccc; background: #f5f5f5; cursor: pointer; }
+.${s}-confirm { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+.${s}-confirm:disabled { background: #9ec1f2; border-color: #9ec1f2; cursor: not-allowed; }
+`;
+}
+const C = "maplibre-gl-atlas-print-root";
+class tt {
+  constructor(t) {
+    p(this, "options");
+    p(this, "map");
+    p(this, "container");
+    p(this, "printRoot");
+    p(this, "styleEl");
+    p(this, "activeReview");
     if (typeof document > "u")
       throw new Error(
         "AtlasControl requires a DOM (`document` is undefined) — it cannot be constructed outside a browser."
       );
-    if (!e || typeof e.sheets != "function")
+    if (!t || typeof t.sheets != "function")
       throw new Error("AtlasControl requires `options.sheets: () => AtlasSheet[] | Promise<AtlasSheet[]>`.");
     this.options = {
-      ...e,
-      pageSize: u(e.pageSize),
-      margin: e.margin ?? 15,
-      strategy: e.strategy ?? "auto",
-      showButton: e.showButton ?? !0,
-      injectStyles: e.injectStyles ?? !0
+      ...t,
+      pageSize: x(t.pageSize),
+      margin: t.margin ?? 15,
+      strategy: t.strategy ?? "auto",
+      showButton: t.showButton ?? !0,
+      confirm: t.confirm ?? !0,
+      injectStyles: t.injectStyles ?? !0
     };
   }
-  // The IControl contract hands us the map instance, but this control never
-  // needs it: every sheet gets its own offscreen MapLibre instance
-  // (snapshot.ts), independent of whatever map this control was added to.
-  onAdd(e) {
-    const n = document.createElement("div");
-    if (n.className = "maplibregl-ctrl maplibregl-ctrl-group maplibre-gl-atlas-ctrl", this.options.showButton) {
-      const r = document.createElement("button");
-      r.type = "button", r.className = "maplibre-gl-atlas-ctrl-button", r.title = "Print atlas", r.setAttribute("aria-label", "Print atlas"), r.textContent = "🖨", r.addEventListener("click", () => {
-        this.print().catch((a) => this.handleError(a));
-      }), n.appendChild(r);
+  // Sheets themselves are always rendered via their own offscreen MapLibre
+  // instance (snapshot.ts), independent of this map — but review() draws
+  // sheet-bounds outlines onto it, so (unlike before the review feature)
+  // the control now needs to hold onto it.
+  onAdd(t) {
+    this.map = t, this.options.injectStyles && this.injectStyles(E(this.options.strategy));
+    const e = document.createElement("div");
+    if (e.className = "maplibregl-ctrl maplibregl-ctrl-group maplibre-gl-atlas-ctrl", this.options.showButton) {
+      const i = document.createElement("button");
+      i.type = "button", i.className = "maplibre-gl-atlas-ctrl-button", i.title = "Print atlas", i.setAttribute("aria-label", "Print atlas"), i.textContent = "🖨", i.addEventListener("click", () => {
+        (this.options.confirm ? this.review() : this.print()).catch((a) => this.handleError(a));
+      }), e.appendChild(i);
     }
-    return this.container = n, n;
+    return this.container = e, e;
   }
   onRemove() {
-    var e, n;
-    (e = this.container) == null || e.remove(), this.container = void 0, this.cleanup(), (n = this.styleEl) == null || n.remove(), this.styleEl = void 0;
+    var t, e, i;
+    (t = this.activeReview) == null || t.dispose(), this.activeReview = void 0, (e = this.container) == null || e.remove(), this.container = void 0, this.cleanup(), (i = this.styleEl) == null || i.remove(), this.styleEl = void 0, this.map = void 0;
   }
-  /** Builds the print DOM (sheets resolved, snapshotted, and laid out) without calling `window.print()`. */
+  /**
+   * Shows the interactive review panel: how many sheets, where each one is
+   * (outlined on the live map, for sheets with `bounds`), with a checkbox
+   * per sheet to deselect it before printing. Resolves once the user either
+   * confirms (after which the selected subset is printed, same as calling
+   * `print()` with that subset) or cancels (nothing is printed). This is
+   * what the built-in button calls by default (`confirm: true`) — see
+   * adr/0002 for why `print()`/`prepare()` themselves never show this.
+   */
+  async review() {
+    var e;
+    (e = this.activeReview) == null || e.dispose();
+    const t = await this.options.sheets();
+    await new Promise((i, o) => {
+      this.activeReview = new G({
+        map: this.map,
+        sheets: t,
+        onConfirm: (a) => {
+          this.activeReview = void 0, this.printSheets(a).then(i, o);
+        },
+        onCancel: () => {
+          this.activeReview = void 0, i();
+        }
+      });
+    });
+  }
+  /** Builds the print DOM (sheets resolved, snapshotted, and laid out) without calling `window.print()`. Never shows the review panel. */
   async prepare() {
-    var e, n;
-    try {
-      await ((n = (e = this.options).onBeforePrint) == null ? void 0 : n.call(e));
-      const r = await this.options.sheets();
-      H(r);
-      const a = N(this.options.strategy), s = r.map(y), i = R(s);
-      this.options.injectStyles && this.injectStyles(a);
-      const p = this.getOrCreatePrintRoot();
-      p.innerHTML = "", p.className = a === "rotate" ? `strategy-rotate base-${i}` : "strategy-mixed";
-      for (const l of r) {
-        const m = y(l), { dataUrl: o, scaleHtml: d } = await D(l, this.options.pageSize), h = a === "rotate" && m !== i;
-        p.appendChild(j(l, m, h, o, d));
-      }
-    } catch (r) {
-      throw this.handleError(r), r;
-    }
+    const t = await this.options.sheets();
+    await this.buildPrintDom(t);
   }
-  /** `prepare()`, then triggers `window.print()` and waits for it to finish (the `afterprint` event). */
+  /** `prepare()`, then triggers `window.print()` and waits for it to finish (the `afterprint` event). Never shows the review panel. */
   async print() {
-    var e, n;
-    await this.prepare(), await new Promise((r) => {
+    const t = await this.options.sheets();
+    await this.printSheets(t);
+  }
+  /** Shared by `print()` and `review()`'s confirm handler: an already-resolved (and possibly user-filtered) sheet list, straight through to printing. */
+  async printSheets(t) {
+    var e, i;
+    await this.buildPrintDom(t), await new Promise((o) => {
       const a = () => {
-        window.removeEventListener("afterprint", a), r();
+        window.removeEventListener("afterprint", a), o();
       };
       window.addEventListener("afterprint", a), window.print();
     });
     try {
-      await ((n = (e = this.options).onAfterPrint) == null ? void 0 : n.call(e));
-    } catch (r) {
-      this.handleError(r);
+      await ((i = (e = this.options).onAfterPrint) == null ? void 0 : i.call(e));
+    } catch (o) {
+      this.handleError(o);
     } finally {
       this.cleanup();
     }
   }
+  async buildPrintDom(t) {
+    var e, i;
+    try {
+      await ((i = (e = this.options).onBeforePrint) == null ? void 0 : i.call(e)), X(t);
+      const o = E(this.options.strategy), a = t.map(S), r = O(a);
+      this.options.injectStyles && this.injectStyles(o);
+      const d = this.getOrCreatePrintRoot();
+      d.innerHTML = "", d.className = o === "rotate" ? `strategy-rotate base-${r}` : "strategy-mixed";
+      for (const c of t) {
+        const h = S(c), { dataUrl: l, scaleHtml: m } = await W(c, this.options.pageSize), u = o === "rotate" && h !== r;
+        d.appendChild(Z(c, h, u, l, m));
+      }
+    } catch (o) {
+      throw this.handleError(o), o;
+    }
+  }
   /** Empties the print DOM and removes any offscreen staging elements left behind by a failed snapshot. */
   cleanup() {
-    this.printRoot && (this.printRoot.innerHTML = ""), document.querySelectorAll("[data-maplibre-gl-atlas-stage]").forEach((e) => e.remove());
+    this.printRoot && (this.printRoot.innerHTML = ""), document.querySelectorAll("[data-maplibre-gl-atlas-stage]").forEach((t) => t.remove());
   }
-  injectStyles(e) {
-    const n = [
-      P(),
-      L(this.options.pageSize, e),
-      M(this.options.margin)
+  injectStyles(t) {
+    const e = [
+      k(),
+      j(this.options.pageSize, t),
+      B(this.options.margin),
+      Y()
     ].join(`
 `);
-    this.styleEl || (this.styleEl = document.createElement("style"), document.head.appendChild(this.styleEl)), this.styleEl.textContent = n;
+    this.styleEl || (this.styleEl = document.createElement("style"), document.head.appendChild(this.styleEl)), this.styleEl.textContent = e;
   }
   getOrCreatePrintRoot() {
-    var n;
-    if ((n = this.printRoot) != null && n.isConnected) return this.printRoot;
-    let e = document.getElementById(b);
-    return e || (e = document.createElement("div"), e.id = b, e.setAttribute("aria-hidden", "true"), document.body.appendChild(e)), this.printRoot = e, e;
+    var e;
+    if ((e = this.printRoot) != null && e.isConnected) return this.printRoot;
+    let t = document.getElementById(C);
+    return t || (t = document.createElement("div"), t.id = C, t.setAttribute("aria-hidden", "true"), document.body.appendChild(t)), this.printRoot = t, t;
   }
-  handleError(e) {
-    this.options.onError ? this.options.onError(e) : console.error("[maplibre-gl-atlas]", e);
+  handleError(t) {
+    this.options.onError ? this.options.onError(t) : console.error("[maplibre-gl-atlas]", t);
   }
 }
-function y(t) {
-  return t.orientation === "landscape" ? "landscape" : "portrait";
+function S(n) {
+  return n.orientation === "landscape" ? "landscape" : "portrait";
 }
-function H(t) {
-  if (t.length <= 1) return;
-  t.some((n) => !!n.pitch) && console.warn(
+function X(n) {
+  if (n.length <= 1) return;
+  n.some((e) => !!e.pitch) && console.warn(
     "[maplibre-gl-atlas] One or more sheets have a non-zero `pitch`. Pitch introduces perspective distortion — the map scale varies across the sheet, and physical edges won't line up with neighboring sheets. Reserve `pitch` for a standalone sheet (e.g. a cover page) that isn't meant to be tiled edge-to-edge with the others."
   );
 }
-function j(t, e, n, r, a) {
-  const s = document.createElement("section");
-  s.className = `print-page ${e}-page${t.className ? ` ${t.className}` : ""}`;
-  const i = document.createElement("div");
-  i.className = `print-page-inner ${e}-page${n ? " rotated" : ""}`;
-  const p = document.createElement("div");
-  if (p.className = "print-header", t.headerLeft) {
-    const o = document.createElement("div");
-    o.className = "print-brand", o.textContent = t.headerLeft, p.appendChild(o);
+function Z(n, t, e, i, o) {
+  const a = document.createElement("section");
+  a.className = `print-page ${t}-page${n.className ? ` ${n.className}` : ""}`;
+  const r = document.createElement("div");
+  r.className = `print-page-inner ${t}-page${e ? " rotated" : ""}`;
+  const d = document.createElement("div");
+  if (d.className = "print-header", n.headerLeft) {
+    const l = document.createElement("div");
+    l.className = "print-brand", l.textContent = n.headerLeft, d.appendChild(l);
   }
-  if (t.headerRight) {
-    const o = document.createElement("div");
-    o.className = "print-ref", o.textContent = t.headerRight, p.appendChild(o);
+  if (n.headerRight) {
+    const l = document.createElement("div");
+    l.className = "print-ref", l.textContent = n.headerRight, d.appendChild(l);
   }
-  i.appendChild(p);
-  const l = document.createElement("div");
-  l.className = "print-map";
-  const m = document.createElement("img");
-  if (m.src = r, m.alt = "", l.appendChild(m), i.appendChild(l), t.footer !== !1) {
-    const o = document.createElement("div");
-    o.className = "print-footer", o.innerHTML = a, i.appendChild(o);
+  r.appendChild(d);
+  const c = document.createElement("div");
+  c.className = "print-map";
+  const h = document.createElement("img");
+  if (h.src = i, h.alt = "", c.appendChild(h), r.appendChild(c), n.footer !== !1) {
+    const l = document.createElement("div");
+    l.className = "print-footer", l.innerHTML = o, r.appendChild(l);
   }
-  return s.appendChild(i), s;
+  return a.appendChild(r), a;
 }
 export {
-  U as AtlasControl,
-  A as choosePrintStrategy,
-  S as isLikelyWindows
+  tt as AtlasControl,
+  G as ReviewPanel,
+  D as choosePrintStrategy,
+  z as isLikelyWindows
 };
 //# sourceMappingURL=maplibre-gl-atlas.js.map

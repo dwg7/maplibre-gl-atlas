@@ -73,3 +73,16 @@ dwg7組織としてのpublic domain姿勢に一貫性が出る。
 対象になりうる、というMIT優位の実務的トレードオフは残るが、このライブラリの
 想定利用者(GIS/OSSコミュニティ、MapLibreエコシステム)を踏まえて許容した。
 → [dwg7/zukakuのLICENSE](https://github.com/dwg7/zukaku/blob/main/LICENSE)(同一のCC0テキスト)
+
+## D6: 印刷前に確認・調整できる`review()`ステップを追加(組み込みボタンの既定)
+
+v1は「ボタン→即座に全シート印刷」という直線的なフローしか持たず、実用に
+ならないという指摘を受けた——どの範囲をどう印刷するかはユーザーが決めたい。
+新しい`review()`メソッドを追加し、組み込みボタンは既定でこれを呼ぶ
+(`AtlasControlOptions.confirm ?? true`)。パネルは`AtlasSheet`の既存
+フィールド(`bounds`/`headerLeft`/`headerRight`/`role`/`orientation`)だけで
+構成し、`bounds`を持つシートはライブ地図上に矩形をハイライト表示する——
+グリッド概念は持ち込まない(D4と同じ設計原則)。`print()`/`prepare()`自体は
+一切変更しておらず、プログラム的な呼び出し(Playwright経由等)には確認が
+割り込まない。
+→ [adr/0002](adr/0002-print-review-step.md)

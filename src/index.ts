@@ -2,6 +2,7 @@ import type { IControl, Map as MapLibreMap } from "maplibre-gl";
 import { generateBaseCss, generateLayoutCss, resolvePageSize } from "./layout";
 import { computeBaseOrientation, generateStrategyCss, resolveStrategy } from "./strategy";
 import { snapshotSheet } from "./snapshot";
+import { ReviewPanel, generateReviewCss } from "./review";
 import type { AtlasControlOptions, AtlasSheet, Orientation, PrintStrategy } from "./types";
 
 export type {
@@ -16,6 +17,8 @@ export type {
   PrintStrategyOption,
 } from "./types";
 export { isLikelyWindows, choosePrintStrategy } from "./strategy";
+export { ReviewPanel } from "./review";
+export type { ReviewMapLike, ReviewPanelOptions } from "./review";
 
 const PRINT_ROOT_ID = "maplibre-gl-atlas-print-root";
 
@@ -24,6 +27,7 @@ interface ResolvedOptions extends AtlasControlOptions {
   margin: NonNullable<AtlasControlOptions["margin"]>;
   strategy: NonNullable<AtlasControlOptions["strategy"]>;
   showButton: boolean;
+  confirm: boolean;
   injectStyles: boolean;
 }
 
@@ -37,9 +41,11 @@ interface ResolvedOptions extends AtlasControlOptions {
  */
 export class AtlasControl implements IControl {
   private readonly options: ResolvedOptions;
+  private map?: MapLibreMap;
   private container?: HTMLElement;
   private printRoot?: HTMLElement;
   private styleEl?: HTMLStyleElement;
+  private activeReview?: ReviewPanel;
 
   constructor(options: AtlasControlOptions) {
     if (typeof document === "undefined") {
@@ -57,14 +63,25 @@ export class AtlasControl implements IControl {
       margin: options.margin ?? 15,
       strategy: options.strategy ?? "auto",
       showButton: options.showButton ?? true,
+      confirm: options.confirm ?? true,
       injectStyles: options.injectStyles ?? true,
     };
   }
 
-  // The IControl contract hands us the map instance, but this control never
-  // needs it: every sheet gets its own offscreen MapLibre instance
-  // (snapshot.ts), independent of whatever map this control was added to.
-  onAdd(_map: MapLibreMap): HTMLElement {
+  // Sheets themselves are always rendered via their own offscreen MapLibre
+  // instance (snapshot.ts), independent of this map — but review() draws
+  // sheet-bounds outlines onto it, so (unlike before the review feature)
+  // the control now needs to hold onto it.
+  onAdd(map: MapLibreMap): HTMLElement {
+    this.map = map;
+    // Injected here (not just inside buildPrintDom) so review()'s panel is
+    // already styled the first time it opens — buildPrintDom's own call is
+    // still there too (idempotent) since the strategy/pageSize/margin CSS
+    // genuinely belongs to the print job, not the control's lifecycle.
+    if (this.options.injectStyles) {
+      this.injectStyles(resolveStrategy(this.options.strategy));
+    }
+
     const container = document.createElement("div");
     container.className = "maplibregl-ctrl maplibregl-ctrl-group maplibre-gl-atlas-ctrl";
 
@@ -76,7 +93,8 @@ export class AtlasControl implements IControl {
       button.setAttribute("aria-label", "Print atlas");
       button.textContent = "🖨";
       button.addEventListener("click", () => {
-        this.print().catch((err) => this.handleError(err));
+        const action = this.options.confirm ? this.review() : this.print();
+        action.catch((err) => this.handleError(err));
       });
       container.appendChild(button);
     }
@@ -86,19 +104,81 @@ export class AtlasControl implements IControl {
   }
 
   onRemove(): void {
+    this.activeReview?.dispose();
+    this.activeReview = undefined;
     this.container?.remove();
     this.container = undefined;
     this.cleanup();
     this.styleEl?.remove();
     this.styleEl = undefined;
+    this.map = undefined;
   }
 
-  /** Builds the print DOM (sheets resolved, snapshotted, and laid out) without calling `window.print()`. */
+  /**
+   * Shows the interactive review panel: how many sheets, where each one is
+   * (outlined on the live map, for sheets with `bounds`), with a checkbox
+   * per sheet to deselect it before printing. Resolves once the user either
+   * confirms (after which the selected subset is printed, same as calling
+   * `print()` with that subset) or cancels (nothing is printed). This is
+   * what the built-in button calls by default (`confirm: true`) — see
+   * adr/0002 for why `print()`/`prepare()` themselves never show this.
+   */
+  async review(): Promise<void> {
+    this.activeReview?.dispose();
+    const sheets = await this.options.sheets();
+    await new Promise<void>((resolve, reject) => {
+      this.activeReview = new ReviewPanel({
+        map: this.map,
+        sheets,
+        onConfirm: (selected) => {
+          this.activeReview = undefined;
+          this.printSheets(selected).then(resolve, reject);
+        },
+        onCancel: () => {
+          this.activeReview = undefined;
+          resolve();
+        },
+      });
+    });
+  }
+
+  /** Builds the print DOM (sheets resolved, snapshotted, and laid out) without calling `window.print()`. Never shows the review panel. */
   async prepare(): Promise<void> {
+    const sheets = await this.options.sheets();
+    await this.buildPrintDom(sheets);
+  }
+
+  /** `prepare()`, then triggers `window.print()` and waits for it to finish (the `afterprint` event). Never shows the review panel. */
+  async print(): Promise<void> {
+    const sheets = await this.options.sheets();
+    await this.printSheets(sheets);
+  }
+
+  /** Shared by `print()` and `review()`'s confirm handler: an already-resolved (and possibly user-filtered) sheet list, straight through to printing. */
+  private async printSheets(sheets: AtlasSheet[]): Promise<void> {
+    await this.buildPrintDom(sheets);
+
+    await new Promise<void>((resolve) => {
+      const onAfterPrint = () => {
+        window.removeEventListener("afterprint", onAfterPrint);
+        resolve();
+      };
+      window.addEventListener("afterprint", onAfterPrint);
+      window.print();
+    });
+
+    try {
+      await this.options.onAfterPrint?.();
+    } catch (err) {
+      this.handleError(err);
+    } finally {
+      this.cleanup();
+    }
+  }
+
+  private async buildPrintDom(sheets: AtlasSheet[]): Promise<void> {
     try {
       await this.options.onBeforePrint?.();
-
-      const sheets = await this.options.sheets();
       warnAboutPitch(sheets);
 
       const strategy = resolveStrategy(this.options.strategy);
@@ -125,28 +205,6 @@ export class AtlasControl implements IControl {
     }
   }
 
-  /** `prepare()`, then triggers `window.print()` and waits for it to finish (the `afterprint` event). */
-  async print(): Promise<void> {
-    await this.prepare();
-
-    await new Promise<void>((resolve) => {
-      const onAfterPrint = () => {
-        window.removeEventListener("afterprint", onAfterPrint);
-        resolve();
-      };
-      window.addEventListener("afterprint", onAfterPrint);
-      window.print();
-    });
-
-    try {
-      await this.options.onAfterPrint?.();
-    } catch (err) {
-      this.handleError(err);
-    } finally {
-      this.cleanup();
-    }
-  }
-
   /** Empties the print DOM and removes any offscreen staging elements left behind by a failed snapshot. */
   cleanup(): void {
     if (this.printRoot) {
@@ -160,6 +218,7 @@ export class AtlasControl implements IControl {
       generateBaseCss(),
       generateStrategyCss(this.options.pageSize, strategy),
       generateLayoutCss(this.options.margin),
+      generateReviewCss(),
     ].join("\n");
 
     if (!this.styleEl) {
