@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>maplibre-gl-atlas example</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/maplibre-gl@^6/dist/maplibre-gl.css"
+/>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; }
+  #map { position: absolute; inset: 0; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<script type="module">
+  // This example has no build step — it imports maplibre-gl and
+  // @dwg7/maplibre-gl-atlas straight from a CDN, the same way maplibre-gl
+  // itself is meant to be dropped into a plain HTML page. Swap the
+  // @dwg7/maplibre-gl-atlas URL for a local `../../dist/maplibre-gl-atlas.js`
+  // build when developing against this repo's own source.
+  import { Map } from "https://unpkg.com/maplibre-gl@^6/dist/maplibre-gl.mjs";
+  import { AtlasControl } from "https://unpkg.com/@dwg7/maplibre-gl-atlas/dist/maplibre-gl-atlas.js";
+
+  const DEMO_STYLE = "https://demotiles.maplibre.org/style.json";
+
+  // A hand-picked 1x3 strip over western Europe, split into three detail
+  // sheets plus one index sheet covering all three — deliberately not using
+  // any grid-computation helper, since this library has no such concept
+  // (see CLAUDE.md). A real caller (like dwg7/zukaku) would compute these
+  // bounds from a UI-driven grid instead of hardcoding them.
+  const cells = [
+    { ref: "A1", bounds: [[-5, 45], [0, 50]] },
+    { ref: "A2", bounds: [[0, 45], [5, 50]] },
+    { ref: "A3", bounds: [[5, 45], [10, 50]] },
+  ];
+  const overviewBounds = [
+    [-5, 45],
+    [10, 50],
+  ];
+
+  const map = new Map({
+    container: "map",
+    style: DEMO_STYLE,
+    center: [2.5, 47.5],
+    zoom: 4,
+  });
+
+  map.addControl(
+    new AtlasControl({
+      sheets: () => [
+        {
+          role: "index",
+          style: DEMO_STYLE,
+          bounds: overviewBounds,
+          padding: 40,
+          // Three cells side by side: inflate the offscreen stage 3x
+          // horizontally so this index sheet renders at roughly the same
+          // vector-tile zoom level the detail sheets below use (ADR 0009's
+          // zoom-level-shift technique, ported from dwg7/zukaku).
+          renderScale: { x: 3, y: 1 },
+          headerLeft: "Atlas Example",
+          headerRight: "Index",
+          decorate: (offscreenMap) => {
+            // The seam for atlas-specific drawing — this library has no
+            // idea what a "grid" is, so the caller draws its own reference
+            // rectangles/labels here, exactly like dwg7/zukaku's
+            // addOverviewGridLayers() does.
+            const features = cells.map((cell) => ({
+              type: "Feature",
+              properties: { ref: cell.ref },
+              geometry: {
+                type: "Polygon",
+                coordinates: [
+                  [
+                    [cell.bounds[0][0], cell.bounds[1][1]],
+                    [cell.bounds[1][0], cell.bounds[1][1]],
+                    [cell.bounds[1][0], cell.bounds[0][1]],
+                    [cell.bounds[0][0], cell.bounds[0][1]],
+                    [cell.bounds[0][0], cell.bounds[1][1]],
+                  ],
+                ],
+              },
+            }));
+            offscreenMap.addSource("example-grid", {
+              type: "geojson",
+              data: { type: "FeatureCollection", features },
+            });
+            offscreenMap.addLayer({
+              id: "example-grid-lines",
+              type: "line",
+              source: "example-grid",
+              paint: { "line-color": "#000", "line-width": 1.5 },
+            });
+            offscreenMap.addLayer({
+              id: "example-grid-labels",
+              type: "symbol",
+              source: "example-grid",
+              layout: {
+                "text-field": ["get", "ref"],
+                "text-size": 28,
+                "symbol-placement": "point",
+              },
+              paint: { "text-color": "#000", "text-halo-color": "#fff", "text-halo-width": 2 },
+            });
+          },
+        },
+        ...cells.map((cell) => ({
+          role: "detail",
+          style: DEMO_STYLE,
+          bounds: cell.bounds,
+          headerLeft: "Atlas Example",
+          headerRight: cell.ref,
+        })),
+      ],
+      onError: (err) => {
+        console.error("Atlas print failed:", err);
+        alert(`Atlas print failed: ${err}`);
+      },
+    }),
+    "top-right",
+  );
+</script>
+</body>
+</html>
