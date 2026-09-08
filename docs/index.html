@@ -17,6 +17,29 @@
     background: rgba(255,255,255,0.9); border-bottom: 1px solid #ccc;
   }
   #banner a { color: #06c; }
+
+  /* Ported from dwg7/zukaku's docs/index.html (ADR 0005): the page grid is
+     fixed to the screen center, not to the map — the user pans/zooms the
+     map underneath it to line up the area they want. */
+  #grid-overlay {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    z-index: 5; pointer-events: none; display: grid;
+    outline: 2px solid rgba(0, 0, 0, 0.6);
+  }
+  #grid-overlay .cell { border: 1px solid rgba(0, 0, 0, 0.6); box-sizing: border-box; }
+
+  .panel {
+    position: absolute; z-index: 6;
+    background: rgba(255, 255, 255, 0.92); border-radius: 4px;
+    padding: 6px 10px; font: 12px/1.4 system-ui, sans-serif; color: #333;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  }
+  #grid-panel { top: 46px; left: 50%; transform: translateX(-50%); display: flex; gap: 14px; align-items: center; }
+  #grid-panel .field { display: flex; align-items: center; gap: 4px; }
+  #grid-panel .value { min-width: 1.2em; text-align: center; font-weight: bold; }
+  #grid-panel button { font: inherit; width: 22px; height: 22px; border-radius: 3px; border: 1px solid #999; background: #fff; cursor: pointer; }
+  #grid-panel #orientation-toggle { width: auto; padding: 0 10px; }
+  #page-estimate { top: 82px; left: 50%; transform: translateX(-50%); color: #555; }
 </style>
 <script type="importmap">
 {
@@ -28,14 +51,32 @@
 </head>
 <body>
 <div id="banner">
-  <strong>@dwg7/maplibre-gl-atlas</strong> live demo — click the print button
-  (top-right of the map) to print a 3-sheet atlas. Not yet published to npm,
-  so this page loads a vendored build from <code>./vendor/</code> instead of
-  a CDN; see <a href="https://github.com/dwg7/maplibre-gl-atlas">the repo</a>
+  <strong>@dwg7/maplibre-gl-atlas</strong> live demo — adjust rows/cols/orientation
+  below, then click the print button (top-right of the map). Not yet published
+  to npm, so this page loads a vendored build from <code>./vendor/</code>
+  instead of a CDN; see <a href="https://github.com/dwg7/maplibre-gl-atlas">the repo</a>
   and <a href="https://github.com/dwg7/maplibre-gl-atlas/blob/main/examples/basic/index.html">examples/basic/index.html</a>
   (the canonical, npm-based version of this same example).
 </div>
 <div id="map"></div>
+<div id="grid-overlay"></div>
+
+<div id="grid-panel" class="panel">
+  <div class="field">
+    <span>rows (m)</span>
+    <button type="button" data-adjust="rows" data-delta="-1">−</button>
+    <span class="value" id="rows-value">1</span>
+    <button type="button" data-adjust="rows" data-delta="1">+</button>
+  </div>
+  <div class="field">
+    <span>cols (n)</span>
+    <button type="button" data-adjust="cols" data-delta="-1">−</button>
+    <span class="value" id="cols-value">3</span>
+    <button type="button" data-adjust="cols" data-delta="1">+</button>
+  </div>
+  <button type="button" id="orientation-toggle">portrait</button>
+</div>
+<div id="page-estimate" class="panel"></div>
 
 <script type="module">
   // Same example as examples/basic/index.html, except AtlasControl is
@@ -52,20 +93,11 @@
   // coverage, so it renders anywhere, unlike zukaku's Japan-only styles.
   const DEMO_STYLE = "https://stars.optgeo.org/style/positron";
 
-  // A hand-picked 1x3 strip over central Sapporo, split into three detail
-  // sheets plus one index sheet covering all three — deliberately not using
-  // any grid-computation helper, since this library has no such concept
-  // (see CLAUDE.md). A real caller (like dwg7/zukaku) would compute these
-  // bounds from a UI-driven grid instead of hardcoding them.
-  const cells = [
-    { ref: "A1", bounds: [[141.34, 43.05], [141.35, 43.075]] },
-    { ref: "A2", bounds: [[141.35, 43.05], [141.36, 43.075]] },
-    { ref: "A3", bounds: [[141.36, 43.05], [141.37, 43.075]] },
-  ];
-  const overviewBounds = [
-    [141.34, 43.05],
-    [141.37, 43.075],
-  ];
+  // A4 aspect ratio (width/height) — matches dwg7/zukaku's docs/index.html.
+  const A4_ASPECT = { portrait: 210 / 297, landscape: 297 / 210 };
+  const BASE_CELL_WIDTH = 130; // on-screen preview cell width, CSS px
+
+  const state = { rows: 1, cols: 3, orientation: "portrait" };
 
   const map = new Map({
     container: "map",
@@ -76,75 +108,176 @@
     // clobbering any other app state that might share the fragment — the
     // pattern dwg7/zukaku and dwg7/height-coverage already use.
     hash: "map",
+    // dwg7/zukaku locks rotation for the same reason (ADR 0005, 2026-08-31
+    // addendum): the grid math below unprojects two screen corners into a
+    // bbox — only a valid axis-aligned rectangle when bearing is 0.
+    dragRotate: false,
+    pitchWithRotate: false,
   });
+  map.touchZoomRotate.disableRotation();
+
+  // --- m x n grid + orientation, ported from dwg7/zukaku's docs/index.html
+  // (renderGrid()/computePages(), ADR 0005) — this is *the* fix for two
+  // problems the previous hardcoded-bounds version of this example had:
+  // no way to change how many sheets print, and a paper aspect ratio that
+  // didn't actually match the printed page (hand-picked lng/lat spans have
+  // no reason to land on 210:297). Deriving each cell's bounds from
+  // map.unproject() on a screen-space rectangle that's already sized to the
+  // target page aspect ratio fixes both at once.
+  const gridOverlay = document.getElementById("grid-overlay");
+  const rowsValue = document.getElementById("rows-value");
+  const colsValue = document.getElementById("cols-value");
+  const orientationToggle = document.getElementById("orientation-toggle");
+  const pageEstimate = document.getElementById("page-estimate");
+
+  function renderGrid() {
+    const aspect = A4_ASPECT[state.orientation]; // width / height
+    const cellWidth = BASE_CELL_WIDTH;
+    const cellHeight = cellWidth / aspect;
+    const totalWidth = cellWidth * state.cols;
+    const totalHeight = cellHeight * state.rows;
+    const maxWidth = window.innerWidth * 0.7;
+    const maxHeight = window.innerHeight * 0.6;
+    const scale = Math.min(1, maxWidth / totalWidth, maxHeight / totalHeight);
+
+    gridOverlay.style.gridTemplateColumns = `repeat(${state.cols}, 1fr)`;
+    gridOverlay.style.gridTemplateRows = `repeat(${state.rows}, 1fr)`;
+    gridOverlay.style.width = `${totalWidth * scale}px`;
+    gridOverlay.style.height = `${totalHeight * scale}px`;
+
+    gridOverlay.innerHTML = "";
+    for (let i = 0; i < state.rows * state.cols; i++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      gridOverlay.appendChild(cell);
+    }
+
+    rowsValue.textContent = String(state.rows);
+    colsValue.textContent = String(state.cols);
+    orientationToggle.textContent = state.orientation;
+    pageEstimate.textContent = `${state.rows * state.cols + 1} sheets (incl. index)`;
+  }
+
+  document.getElementById("grid-panel").addEventListener("click", (e) => {
+    const stepBtn = e.target.closest("button[data-adjust]");
+    if (stepBtn) {
+      const key = stepBtn.dataset.adjust;
+      const delta = Number(stepBtn.dataset.delta);
+      state[key] = Math.min(6, Math.max(1, state[key] + delta));
+      renderGrid();
+      return;
+    }
+    if (e.target === orientationToggle) {
+      state.orientation = state.orientation === "portrait" ? "landscape" : "portrait";
+      renderGrid();
+    }
+  });
+  window.addEventListener("resize", renderGrid);
+  renderGrid();
+
+  // Per-cell bbox via the live map's own map.unproject() — the same
+  // projection MapLibre uses internally, rather than re-deriving Mercator
+  // math by hand (dwg7/zukaku ADR 0005) — stays correct regardless of
+  // center/zoom.
+  function computeSheets() {
+    const rect = gridOverlay.getBoundingClientRect();
+    const cellWidth = rect.width / state.cols;
+    const cellHeight = rect.height / state.rows;
+
+    const detailSheets = [];
+    const cells = [];
+    for (let r = 0; r < state.rows; r++) {
+      for (let c = 0; c < state.cols; c++) {
+        const left = rect.left + c * cellWidth;
+        const top = rect.top + r * cellHeight;
+        const nw = map.unproject([left, top]);
+        const se = map.unproject([left + cellWidth, top + cellHeight]);
+        const ref = `${String.fromCharCode(65 + r)}${c + 1}`;
+        const bounds = [nw.lng, se.lat, se.lng, nw.lat]; // west, south, east, north
+        cells.push({ ref, bounds });
+        detailSheets.push({
+          role: "detail",
+          style: DEMO_STYLE,
+          bounds,
+          orientation: state.orientation,
+          headerLeft: "Atlas Example",
+          headerRight: ref,
+        });
+      }
+    }
+
+    const overallNW = map.unproject([rect.left, rect.top]);
+    const overallSE = map.unproject([rect.left + rect.width, rect.top + rect.height]);
+    // Whichever A4 orientation better matches the full grid's aspect ratio,
+    // so the index sheet doesn't waste paper on empty margins.
+    const overallAspect = (state.cols / state.rows) * A4_ASPECT[state.orientation];
+    const overviewOrientation = overallAspect >= 1 ? "landscape" : "portrait";
+
+    const indexSheet = {
+      role: "index",
+      style: DEMO_STYLE,
+      bounds: [overallNW.lng, overallSE.lat, overallSE.lng, overallNW.lat],
+      orientation: overviewOrientation,
+      headerLeft: "Atlas Example",
+      headerRight: "Index",
+      // Breathing room around the grid block, scaled with the grid so it
+      // stays visually proportional once renderScale shrinks it back down.
+      padding: 50 * Math.max(state.cols, state.rows),
+      // Zoom-level shift (dwg7/zukaku ADR 0009): stage the index sheet in a
+      // container this many times bigger per axis, so it fits the same bbox
+      // at roughly the zoom level a detail sheet would use.
+      renderScale: { x: state.cols, y: state.rows },
+      decorate: (offscreenMap) => {
+        // The seam for atlas-specific drawing — this library has no idea
+        // what a "grid" is, so the caller draws its own reference
+        // rectangles/labels here, exactly like dwg7/zukaku's
+        // addOverviewGridLayers() does.
+        const features = cells.map((cell) => ({
+          type: "Feature",
+          properties: { ref: cell.ref },
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [cell.bounds[0], cell.bounds[3]],
+                [cell.bounds[2], cell.bounds[3]],
+                [cell.bounds[2], cell.bounds[1]],
+                [cell.bounds[0], cell.bounds[1]],
+                [cell.bounds[0], cell.bounds[3]],
+              ],
+            ],
+          },
+        }));
+        offscreenMap.addSource("example-grid", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features },
+        });
+        offscreenMap.addLayer({
+          id: "example-grid-lines",
+          type: "line",
+          source: "example-grid",
+          paint: { "line-color": "#000", "line-width": 1.5 },
+        });
+        offscreenMap.addLayer({
+          id: "example-grid-labels",
+          type: "symbol",
+          source: "example-grid",
+          layout: {
+            "text-field": ["get", "ref"],
+            "text-size": 28,
+            "symbol-placement": "point",
+          },
+          paint: { "text-color": "#000", "text-halo-color": "#fff", "text-halo-width": 2 },
+        });
+      },
+    };
+
+    return [indexSheet, ...detailSheets];
+  }
 
   map.addControl(
     new AtlasControl({
-      sheets: () => [
-        {
-          role: "index",
-          style: DEMO_STYLE,
-          bounds: overviewBounds,
-          padding: 40,
-          // Three cells side by side: inflate the offscreen stage 3x
-          // horizontally so this index sheet renders at roughly the same
-          // vector-tile zoom level the detail sheets below use (ADR 0009's
-          // zoom-level-shift technique, ported from dwg7/zukaku).
-          renderScale: { x: 3, y: 1 },
-          headerLeft: "Atlas Example",
-          headerRight: "Index",
-          decorate: (offscreenMap) => {
-            // The seam for atlas-specific drawing — this library has no
-            // idea what a "grid" is, so the caller draws its own reference
-            // rectangles/labels here, exactly like dwg7/zukaku's
-            // addOverviewGridLayers() does.
-            const features = cells.map((cell) => ({
-              type: "Feature",
-              properties: { ref: cell.ref },
-              geometry: {
-                type: "Polygon",
-                coordinates: [
-                  [
-                    [cell.bounds[0][0], cell.bounds[1][1]],
-                    [cell.bounds[1][0], cell.bounds[1][1]],
-                    [cell.bounds[1][0], cell.bounds[0][1]],
-                    [cell.bounds[0][0], cell.bounds[0][1]],
-                    [cell.bounds[0][0], cell.bounds[1][1]],
-                  ],
-                ],
-              },
-            }));
-            offscreenMap.addSource("example-grid", {
-              type: "geojson",
-              data: { type: "FeatureCollection", features },
-            });
-            offscreenMap.addLayer({
-              id: "example-grid-lines",
-              type: "line",
-              source: "example-grid",
-              paint: { "line-color": "#000", "line-width": 1.5 },
-            });
-            offscreenMap.addLayer({
-              id: "example-grid-labels",
-              type: "symbol",
-              source: "example-grid",
-              layout: {
-                "text-field": ["get", "ref"],
-                "text-size": 28,
-                "symbol-placement": "point",
-              },
-              paint: { "text-color": "#000", "text-halo-color": "#fff", "text-halo-width": 2 },
-            });
-          },
-        },
-        ...cells.map((cell) => ({
-          role: "detail",
-          style: DEMO_STYLE,
-          bounds: cell.bounds,
-          headerLeft: "Atlas Example",
-          headerRight: cell.ref,
-        })),
-      ],
+      sheets: computeSheets,
       onError: (err) => {
         console.error("Atlas print failed:", err);
         alert(`Atlas print failed: ${err}`);
