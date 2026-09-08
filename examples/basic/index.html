@@ -12,20 +12,34 @@
   html, body { margin: 0; padding: 0; height: 100%; }
   #map { position: absolute; inset: 0; }
 </style>
+<script type="importmap">
+{
+  "imports": {
+    "maplibre-gl": "https://unpkg.com/maplibre-gl@^6/dist/maplibre-gl.mjs"
+  }
+}
+</script>
 </head>
 <body>
 <div id="map"></div>
 
 <script type="module">
-  // This example has no build step — it imports maplibre-gl and
-  // @dwg7/maplibre-gl-atlas straight from a CDN, the same way maplibre-gl
-  // itself is meant to be dropped into a plain HTML page. Swap the
-  // @dwg7/maplibre-gl-atlas URL for a local `../../dist/maplibre-gl-atlas.js`
-  // build when developing against this repo's own source.
-  import { Map } from "https://unpkg.com/maplibre-gl@^6/dist/maplibre-gl.mjs";
+  // This example has no build step — it imports maplibre-gl (via the
+  // importmap above) and @dwg7/maplibre-gl-atlas straight from a CDN, the
+  // same way maplibre-gl itself is meant to be dropped into a plain HTML
+  // page. The importmap is required because @dwg7/maplibre-gl-atlas's own
+  // build imports the bare specifier "maplibre-gl" (maplibre-gl is a peer
+  // dependency, not bundled) — without it, the browser can't resolve that
+  // import. Swap the @dwg7/maplibre-gl-atlas URL for a local
+  // `../../dist/maplibre-gl-atlas.js` build when developing against this
+  // repo's own source.
+  import { Map } from "maplibre-gl";
   import { AtlasControl } from "https://unpkg.com/@dwg7/maplibre-gl-atlas/dist/maplibre-gl-atlas.js";
 
-  const DEMO_STYLE = "https://demotiles.maplibre.org/style.json";
+  // stars.optgeo.org (hfu/stars) hosts the same MapLibre styles
+  // dwg7/zukaku's range-selection UI uses — positron is global OSM-planet
+  // coverage, so it renders anywhere, unlike zukaku's Japan-only styles.
+  const DEMO_STYLE = "https://stars.optgeo.org/style/positron";
 
   // A hand-picked 1x3 strip over western Europe, split into three detail
   // sheets plus one index sheet covering all three — deliberately not using

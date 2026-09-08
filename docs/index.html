@@ -47,7 +47,10 @@
   import { Map } from "maplibre-gl";
   import { AtlasControl } from "./vendor/maplibre-gl-atlas.js";
 
-  const DEMO_STYLE = "https://demotiles.maplibre.org/style.json";
+  // stars.optgeo.org (hfu/stars) hosts the same MapLibre styles
+  // dwg7/zukaku's range-selection UI uses — positron is global OSM-planet
+  // coverage, so it renders anywhere, unlike zukaku's Japan-only styles.
+  const DEMO_STYLE = "https://stars.optgeo.org/style/positron";
 
   // A hand-picked 1x3 strip over western Europe, split into three detail
   // sheets plus one index sheet covering all three — deliberately not using

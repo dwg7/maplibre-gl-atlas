@@ -41,14 +41,14 @@ npm install @dwg7/maplibre-gl-atlas maplibre-gl
 import { Map } from "maplibre-gl";
 import { AtlasControl } from "@dwg7/maplibre-gl-atlas";
 
-const map = new Map({ container: "map", style: "https://demotiles.maplibre.org/style.json", center: [0, 0], zoom: 2 });
+const map = new Map({ container: "map", style: "https://stars.optgeo.org/style/positron", center: [0, 0], zoom: 2 });
 
 map.addControl(
   new AtlasControl({
     sheets: () => [
       {
         role: "index",
-        style: "https://demotiles.maplibre.org/style.json",
+        style: "https://stars.optgeo.org/style/positron",
         bounds: [
           [-10, 45],
           [10, 55],
@@ -65,7 +65,7 @@ map.addControl(
       },
       {
         role: "detail",
-        style: "https://demotiles.maplibre.org/style.json",
+        style: "https://stars.optgeo.org/style/positron",
         bounds: [
           [-10, 45],
           [0, 55],
@@ -75,7 +75,7 @@ map.addControl(
       },
       {
         role: "detail",
-        style: "https://demotiles.maplibre.org/style.json",
+        style: "https://stars.optgeo.org/style/positron",
         bounds: [
           [0, 45],
           [10, 55],
@@ -93,7 +93,11 @@ yourself, e.g. from your own UI with `showButton: false`) builds the print
 DOM and opens the browser's print dialog. See
 [`examples/basic/index.html`](examples/basic/index.html) for a complete,
 runnable page (3 detail sheets + 1 index sheet, no build step, no API key —
-it uses MapLibre's own public demo style).
+it uses [stars.optgeo.org](https://stars.optgeo.org)'s `positron` style, the
+same global OSM-planet style [dwg7/zukaku](https://github.com/dwg7/zukaku)
+offers). A live version of this same example is published at
+[dwg7.unopengis.org/maplibre-gl-atlas](https://dwg7.unopengis.org/maplibre-gl-atlas/)
+via [docs/index.html](docs/index.html).
 
 ## API
 

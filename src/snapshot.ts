@@ -37,6 +37,17 @@ export interface SnapshotResult {
  *     Found by clicking through this repo's own `docs/index.html` demo in a
  *     real browser (HANDOVER.md, 2026-09-08) — a static read of the source
  *     alone would not have caught it.
+ *  5. The scale bar's pixel width is corrected by `renderScale`'s factor
+ *     (see below) — a bug present in dwg7/zukaku itself (not just this
+ *     port), found the same way as #4. `ScaleControl` computes its bar's
+ *     width against the offscreen canvas it's actually attached to; for a
+ *     `renderScale`d sheet that canvas is inflated, but the map *image* it
+ *     produces gets shrunk back down (`object-fit: contain`) once embedded
+ *     in the print footer — the extracted scale-bar `<div>` does not get
+ *     the same shrink, so left uncorrected it renders far too wide relative
+ *     to the map next to it. Grid labels already get this same correction
+ *     (dwg7/zukaku issue #5's `labelScale`); the scale bar apparently never
+ *     did.
  */
 export async function snapshotSheet(sheet: AtlasSheet, pageSize: PageSize): Promise<SnapshotResult> {
   const orientation: Orientation = sheet.orientation === "landscape" ? "landscape" : "portrait";
@@ -96,7 +107,14 @@ export async function snapshotSheet(sheet: AtlasSheet, pageSize: PageSize): Prom
     });
 
     const dataUrl = pageMap.getCanvas().toDataURL("image/png");
-    const scaleEl = pageMap.getContainer().querySelector(".maplibregl-ctrl-scale");
+    const scaleEl = pageMap.getContainer().querySelector<HTMLElement>(".maplibregl-ctrl-scale");
+    if (scaleEl && sheet.renderScale) {
+      const factor = Math.max(sheet.renderScale.x, sheet.renderScale.y);
+      const widthPx = parseFloat(scaleEl.style.width);
+      if (!Number.isNaN(widthPx)) {
+        scaleEl.style.width = `${widthPx / factor}px`;
+      }
+    }
     const scaleHtml = scaleEl ? scaleEl.outerHTML : "";
 
     return { dataUrl, scaleHtml, orientation };
