@@ -19,7 +19,8 @@ PR 3: `scripts/render/page.html`の移行)はまだ着手していない。
   スナップショット)・`review.ts`(印刷前の確認・調整パネル、2026-09-08
   追加)・`types.ts`(公開型)。
 - テスト: `tests/strategy.test.ts`・`tests/layout.test.ts`・
-  `tests/render-scale.test.ts`・`tests/review.test.ts`(Vitest)。
+  `tests/render-scale.test.ts`・`tests/review.test.ts`・`tests/index.test.ts`
+  (Vitest、2026-09-09追加、`showButton`のonAdd挙動を検証)。
   `snapshot.ts`(実際のMapLibreインスタンス構築)はvitest/jsdomではWebGL
   コンテキストが無いため単体テスト対象外——計画(§6)通り、実ブラウザ/
   Playwrightでの検証にゆだねる。`review.ts`は地図操作をモック
@@ -156,6 +157,31 @@ portraitで生成した詳細シート(A1/A2/A3)の`<img>`の`naturalWidth/natur
 確認するまで真偽が分からなかった)。デバッグ用の`console.log`を一時的に
 `snapshot.ts`に追加して`load`/`decorate`/`idle`の発火順序を直接確認する形で
 切り分けた(コミットには残していない)。
+
+## 2026-09-09: プラグインコントロールとしての状態遷移(⓪/①/②)、`showButton:false`のバグ修正
+
+hfuさんとの議論(「このコントロールを使うこと自体がMapLibre GL JSの使い方に
+制約を課すか」)を経て、デモのグリッド編集UIを常時表示ではなく**状態遷移**
+として整理した。設計の詳細は[adr/0002の追記(2026-09-09)](adr/0002-print-review-step.md)
+参照。
+
+- ⓪(アトラスモードの外・初期状態)⇄①(編集中、グリッド一式を表示)を
+  右上のトグルボタン(`▦`/`✕`)が担当。②(印刷中)への遷移は①の中に
+  現れる専用「Print」ボタンが担当し、`atlasControl.review()`を呼ぶ。
+- 実装は`AtlasControl`を`showButton:false`で構築し、デモ側で独自の
+  `IControl`(`AtlasModeToggle`)をトグルボタンとして追加する形——
+  ライブラリのAPI自体は変更していない。
+- **この過程で見つかった実バグ**: `showButton:false`のとき`onAdd()`が
+  返すコンテナに`maplibregl-ctrl-group`クラスが残っていて、空の白い
+  ボックスが地図の隅に表示されてしまっていた。`src/index.ts`で修正
+  (ボタンを実際に描画する場合だけクラスを付与)、`tests/index.test.ts`で
+  カバー。
+- グリッドの行/列ラベルを「rows (m)」「cols (n)」から`− 2 + × − 2 +`
+  (ラベル文字列なし、掛け算記法のみ)に単純化。
+
+実機検証(Claude Browserプレビューペイン): ⓪→①→レビュー確認→
+キャンセル→①→⓪の一通りの状態遷移、タイトル入力欄の値が印刷ヘッダーに
+反映されること、を確認済み。
 
 ## 次にやること
 

@@ -345,7 +345,8 @@ class tt {
   onAdd(t) {
     this.map = t, this.options.injectStyles && this.injectStyles(E(this.options.strategy));
     const e = document.createElement("div");
-    if (e.className = "maplibregl-ctrl maplibregl-ctrl-group maplibre-gl-atlas-ctrl", this.options.showButton) {
+    if (this.options.showButton) {
+      e.className = "maplibregl-ctrl maplibregl-ctrl-group maplibre-gl-atlas-ctrl";
       const i = document.createElement("button");
       i.type = "button", i.className = "maplibre-gl-atlas-ctrl-button", i.title = "Print atlas", i.setAttribute("aria-label", "Print atlas"), i.textContent = "🖨", i.addEventListener("click", () => {
         (this.options.confirm ? this.review() : this.print()).catch((a) => this.handleError(a));

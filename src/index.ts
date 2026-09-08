@@ -83,9 +83,17 @@ export class AtlasControl implements IControl {
     }
 
     const container = document.createElement("div");
-    container.className = "maplibregl-ctrl maplibregl-ctrl-group maplibre-gl-atlas-ctrl";
 
     if (this.options.showButton) {
+      // Only carries maplibregl's own control-group chrome (background,
+      // rounded corners, shadow) when there's actually a button inside it —
+      // an empty element with these classes still renders as a small blank
+      // box in the map corner, per maplibregl's own CSS for
+      // .maplibregl-ctrl-group. A caller driving their own UI with
+      // showButton:false (see README) still needs onAdd() called (for the
+      // `map` reference review() draws on, and CSS injection below), just
+      // not a visible artifact from it.
+      container.className = "maplibregl-ctrl maplibregl-ctrl-group maplibre-gl-atlas-ctrl";
       const button = document.createElement("button");
       button.type = "button";
       button.className = "maplibre-gl-atlas-ctrl-button";

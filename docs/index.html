@@ -20,26 +20,43 @@
 
   /* Ported from dwg7/zukaku's docs/index.html (ADR 0005): the page grid is
      fixed to the screen center, not to the map — the user pans/zooms the
-     map underneath it to line up the area they want. */
+     map underneath it to line up the area they want. Hidden outside atlas
+     mode (state ⓪, see the toggle button below). */
   #grid-overlay {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    z-index: 5; pointer-events: none; display: grid;
-    outline: 2px solid rgba(0, 0, 0, 0.6);
+    z-index: 5; pointer-events: none; display: none;
   }
+  #grid-overlay.visible { display: grid; }
+  #grid-overlay { outline: 2px solid rgba(0, 0, 0, 0.6); }
   #grid-overlay .cell { border: 1px solid rgba(0, 0, 0, 0.6); box-sizing: border-box; }
 
-  .panel {
-    position: absolute; z-index: 6;
+  /* Atlas panel — the state-① UI: grid size/orientation, Print, and the
+     title field. Hidden until atlas mode is entered via the toggle button. */
+  #atlas-panel {
+    display: none;
+    position: absolute; top: 56px; left: 50%; transform: translateX(-50%);
+    z-index: 6; flex-direction: column; gap: 6px; align-items: center;
     background: rgba(255, 255, 255, 0.92); border-radius: 4px;
-    padding: 6px 10px; font: 12px/1.4 system-ui, sans-serif; color: #333;
+    padding: 8px 10px; font: 12px/1.4 system-ui, sans-serif; color: #333;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
   }
-  #grid-panel { top: 46px; left: 50%; transform: translateX(-50%); display: flex; gap: 14px; align-items: center; }
-  #grid-panel .field { display: flex; align-items: center; gap: 4px; }
-  #grid-panel .value { min-width: 1.2em; text-align: center; font-weight: bold; }
-  #grid-panel button { font: inherit; width: 22px; height: 22px; border-radius: 3px; border: 1px solid #999; background: #fff; cursor: pointer; }
-  #grid-panel #orientation-toggle { width: auto; padding: 0 10px; }
-  #page-estimate { top: 82px; left: 50%; transform: translateX(-50%); color: #555; }
+  #atlas-panel.visible { display: flex; }
+  #atlas-panel .row { display: flex; gap: 8px; align-items: center; }
+  #atlas-panel button { font: inherit; cursor: pointer; }
+  #atlas-panel .step { width: 22px; height: 22px; border-radius: 3px; border: 1px solid #999; background: #fff; }
+  #atlas-panel .value { min-width: 1.2em; text-align: center; font-weight: bold; }
+  #atlas-panel .sep { font-weight: bold; color: #666; }
+  #orientation-toggle { padding: 0 10px; height: 22px; border-radius: 3px; border: 1px solid #999; background: #fff; }
+  #print-btn {
+    padding: 0 12px; height: 24px; border-radius: 3px; border: 1px solid #1a73e8;
+    background: #1a73e8; color: #fff; font-weight: bold;
+  }
+  #title-input { width: 220px; padding: 3px 6px; font: inherit; border: 1px solid #999; border-radius: 3px; }
+
+  /* Custom top-right toggle button (⓪⇄①) — matches maplibregl's own
+     control button chrome so it sits alongside NavigationControl etc.
+     without looking out of place. */
+  #atlas-toggle-btn[aria-pressed="true"] { background: #e8eaed; }
 </style>
 <script type="importmap">
 {
@@ -51,32 +68,33 @@
 </head>
 <body>
 <div id="banner">
-  <strong>@dwg7/maplibre-gl-atlas</strong> live demo — adjust rows/cols/orientation
-  below, then click the print button (top-right of the map). Not yet published
-  to npm, so this page loads a vendored build from <code>./vendor/</code>
-  instead of a CDN; see <a href="https://github.com/dwg7/maplibre-gl-atlas">the repo</a>
-  and <a href="https://github.com/dwg7/maplibre-gl-atlas/blob/main/examples/basic/index.html">examples/basic/index.html</a>
+  <strong>@dwg7/maplibre-gl-atlas</strong> live demo — click the ▦ button
+  (top-right of the map) to enter atlas mode, adjust the grid, then Print.
+  Not yet published to npm, so this page loads a vendored build from
+  <code>./vendor/</code> instead of a CDN; see
+  <a href="https://github.com/dwg7/maplibre-gl-atlas">the repo</a> and
+  <a href="https://github.com/dwg7/maplibre-gl-atlas/blob/main/examples/basic/index.html">examples/basic/index.html</a>
   (the canonical, npm-based version of this same example).
 </div>
 <div id="map"></div>
 <div id="grid-overlay"></div>
 
-<div id="grid-panel" class="panel">
-  <div class="field">
-    <span>rows (m)</span>
-    <button type="button" data-adjust="rows" data-delta="-1">−</button>
+<div id="atlas-panel">
+  <div class="row">
+    <button type="button" class="step" data-adjust="rows" data-delta="-1">−</button>
     <span class="value" id="rows-value">1</span>
-    <button type="button" data-adjust="rows" data-delta="1">+</button>
-  </div>
-  <div class="field">
-    <span>cols (n)</span>
-    <button type="button" data-adjust="cols" data-delta="-1">−</button>
+    <button type="button" class="step" data-adjust="rows" data-delta="1">+</button>
+    <span class="sep">×</span>
+    <button type="button" class="step" data-adjust="cols" data-delta="-1">−</button>
     <span class="value" id="cols-value">3</span>
-    <button type="button" data-adjust="cols" data-delta="1">+</button>
+    <button type="button" class="step" data-adjust="cols" data-delta="1">+</button>
+    <button type="button" id="orientation-toggle">portrait</button>
+    <button type="button" id="print-btn">Print</button>
   </div>
-  <button type="button" id="orientation-toggle">portrait</button>
+  <div class="row">
+    <input id="title-input" type="text" placeholder="Map title (optional)" maxlength="60">
+  </div>
 </div>
-<div id="page-estimate" class="panel"></div>
 
 <script type="module">
   // Same example as examples/basic/index.html, except AtlasControl is
@@ -97,7 +115,7 @@
   const A4_ASPECT = { portrait: 210 / 297, landscape: 297 / 210 };
   const BASE_CELL_WIDTH = 130; // on-screen preview cell width, CSS px
 
-  const state = { rows: 1, cols: 3, orientation: "portrait" };
+  const state = { rows: 1, cols: 3, orientation: "portrait", title: "", atlasMode: false };
 
   const map = new Map({
     container: "map",
@@ -118,8 +136,8 @@
 
   // --- m x n grid + orientation, ported from dwg7/zukaku's docs/index.html
   // (renderGrid()/computePages(), ADR 0005) — this is *the* fix for two
-  // problems the previous hardcoded-bounds version of this example had:
-  // no way to change how many sheets print, and a paper aspect ratio that
+  // problems an earlier, hardcoded-bounds version of this example had: no
+  // way to change how many sheets print, and a paper aspect ratio that
   // didn't actually match the printed page (hand-picked lng/lat spans have
   // no reason to land on 210:297). Deriving each cell's bounds from
   // map.unproject() on a screen-space rectangle that's already sized to the
@@ -128,7 +146,6 @@
   const rowsValue = document.getElementById("rows-value");
   const colsValue = document.getElementById("cols-value");
   const orientationToggle = document.getElementById("orientation-toggle");
-  const pageEstimate = document.getElementById("page-estimate");
 
   function renderGrid() {
     const aspect = A4_ASPECT[state.orientation]; // width / height
@@ -155,10 +172,9 @@
     rowsValue.textContent = String(state.rows);
     colsValue.textContent = String(state.cols);
     orientationToggle.textContent = state.orientation;
-    pageEstimate.textContent = `${state.rows * state.cols + 1} sheets (incl. index)`;
   }
 
-  document.getElementById("grid-panel").addEventListener("click", (e) => {
+  document.getElementById("atlas-panel").addEventListener("click", (e) => {
     const stepBtn = e.target.closest("button[data-adjust]");
     if (stepBtn) {
       const key = stepBtn.dataset.adjust;
@@ -172,8 +188,67 @@
       renderGrid();
     }
   });
-  window.addEventListener("resize", renderGrid);
+  document.getElementById("title-input").addEventListener("input", (e) => {
+    state.title = e.target.value.trim();
+  });
+  window.addEventListener("resize", () => {
+    if (state.atlasMode) renderGrid();
+  });
   renderGrid();
+
+  // --- Atlas mode toggle (state ⓪ ⇄ ①) ---
+  // A plugin control shouldn't permanently occupy the map with a grid
+  // overlay and panel — those only make sense once someone has actually
+  // asked to build an atlas. The library's own button (print icon,
+  // showButton:true) doesn't fit that: it's a single-purpose print
+  // trigger. So this example drives AtlasControl with showButton:false and
+  // supplies its own top-right toggle button instead, whose only job is
+  // entering/leaving the grid-editing UI below (state ①). The actual
+  // print action (state ②) lives inside that UI, as the dedicated Print
+  // button, which calls the control's own review()/print() — see adr/0002
+  // in the library repo for why review() (not print() directly) is the
+  // right thing for a human-facing button to call.
+  class AtlasModeToggle {
+    onAdd() {
+      this.container = document.createElement("div");
+      this.container.className = "maplibregl-ctrl maplibregl-ctrl-group";
+      this.button = document.createElement("button");
+      this.button.type = "button";
+      this.button.id = "atlas-toggle-btn";
+      this.button.setAttribute("aria-pressed", "false");
+      this.setIdle();
+      this.button.addEventListener("click", () => setAtlasMode(!state.atlasMode));
+      this.container.appendChild(this.button);
+      return this.container;
+    }
+    onRemove() {
+      this.container.remove();
+    }
+    setIdle() {
+      this.button.textContent = "▦";
+      this.button.title = "Enter atlas mode";
+      this.button.setAttribute("aria-label", "Enter atlas mode");
+      this.button.setAttribute("aria-pressed", "false");
+    }
+    setActive() {
+      this.button.textContent = "✕";
+      this.button.title = "Exit atlas mode";
+      this.button.setAttribute("aria-label", "Exit atlas mode");
+      this.button.setAttribute("aria-pressed", "true");
+    }
+  }
+
+  function setAtlasMode(on) {
+    state.atlasMode = on;
+    gridOverlay.classList.toggle("visible", on);
+    document.getElementById("atlas-panel").classList.toggle("visible", on);
+    if (on) {
+      atlasToggle.setActive();
+      renderGrid();
+    } else {
+      atlasToggle.setIdle();
+    }
+  }
 
   // Per-cell bbox via the live map's own map.unproject() — the same
   // projection MapLibre uses internally, rather than re-deriving Mercator
@@ -183,6 +258,7 @@
     const rect = gridOverlay.getBoundingClientRect();
     const cellWidth = rect.width / state.cols;
     const cellHeight = rect.height / state.rows;
+    const headerLeft = state.title ? `Atlas Example: ${state.title}` : "Atlas Example";
 
     const detailSheets = [];
     const cells = [];
@@ -200,7 +276,7 @@
           style: DEMO_STYLE,
           bounds,
           orientation: state.orientation,
-          headerLeft: "Atlas Example",
+          headerLeft,
           headerRight: ref,
         });
       }
@@ -218,7 +294,7 @@
       style: DEMO_STYLE,
       bounds: [overallNW.lng, overallSE.lat, overallSE.lng, overallNW.lat],
       orientation: overviewOrientation,
-      headerLeft: "Atlas Example",
+      headerLeft,
       headerRight: "Index",
       // Breathing room around the grid block, scaled with the grid so it
       // stays visually proportional once renderScale shrinks it back down.
@@ -275,16 +351,22 @@
     return [indexSheet, ...detailSheets];
   }
 
-  map.addControl(
-    new AtlasControl({
-      sheets: computeSheets,
-      onError: (err) => {
-        console.error("Atlas print failed:", err);
-        alert(`Atlas print failed: ${err}`);
-      },
-    }),
-    "top-right",
-  );
+  const atlasControl = new AtlasControl({
+    sheets: computeSheets,
+    showButton: false, // this example drives printing from its own Print button (state ①) instead
+    onError: (err) => {
+      console.error("Atlas print failed:", err);
+      alert(`Atlas print failed: ${err}`);
+    },
+  });
+  map.addControl(atlasControl, "top-right");
+
+  const atlasToggle = new AtlasModeToggle();
+  map.addControl(atlasToggle, "top-right");
+
+  document.getElementById("print-btn").addEventListener("click", () => {
+    atlasControl.review().catch((err) => console.error("Atlas print failed:", err));
+  });
 </script>
 </body>
 </html>

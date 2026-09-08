@@ -78,3 +78,38 @@ class AtlasControl {
 - [CLAUDE.md](../CLAUDE.md) — 「`sheets`と`decorate`が唯一の拡張点」という設計原則
 - [DECISIONS.md](../DECISIONS.md) D4 — `role`と同じ「注釈は良いが分岐条件にはしない」という判断の系譜
 - [dwg7/zukaku ADR 0008](https://github.com/dwg7/zukaku/blob/main/adr/0008-save-paper.md) — Save Paper(グリッドセル単位の除外)。発想の参考にしたが、行・列という概念を前提にしている点でこのADRの`review()`とは別レイヤーの機能
+
+## 追記(2026-09-09): 「プラグインコントロールとしての状態遷移」を明文化、`showButton:false`の見た目バグを修正
+
+デモ(`examples/basic/`・`docs/`)を実際にブラウザで確認したhfuさんから、
+「このコントロールを使うこと自体がMapLibre GL JSの使い方にある程度制約を
+課すことにならざるを得ないか」という問いを経て、「グリッド編集UIを常時
+表示するのではなく、③つの状態(⓪アトラスモードの外/①編集中/②印刷中)
+として整理すべき」という指摘を受けた。
+
+**状態遷移の整理**:
+- ⓪→①: 右上のトグルボタン(グリッド編集UIの表示/非表示だけを担当)。
+- ①→⓪: 同じボタンでキャンセル。
+- ①→②: ①の中に現れる専用の「Print」ボタンが担当し、`review()`を呼ぶ。
+
+これは`AtlasControl`自身のAPI変更を必要としなかった——`showButton:false`+
+呼び出し側が独自に用意したトグルボタン+`review()`の直接呼び出し、という
+既存の組み合わせだけで実現できる。デモ(`examples/basic/index.html`・
+`docs/index.html`)に`AtlasModeToggle`という小さな独自`IControl`実装を追加し、
+グリッド編集UI一式(オーバーレイ・パネル・タイトル入力欄)を①の間だけ
+表示するようにした。
+
+**見つかった実バグ**: `showButton:false`にした際、`onAdd()`が返す
+コンテナに`maplibregl-ctrl maplibregl-ctrl-group`クラスがそのまま付いた
+ままだった。このクラス自体がmaplibregl本体のCSSで背景・角丸・影を
+描画するため、中身が空でも「謎の白い空箱」が地図の隅に見えてしまう
+——`showButton:false`という組み合わせを今回初めて実際に使うまで
+気づかれていなかった見た目上の不具合。`src/index.ts`の`onAdd()`を、
+ボタンを実際に描画する場合だけこれらのクラスを付与するよう修正した。
+`tests/index.test.ts`(新規)で`showButton: true/false`両方の
+コンテナの見た目を検証。
+
+**ラベルの単純化**: グリッドの行/列指定は当初zukakuと同じ「rows (m)」
+「cols (n)」という表記だったが、「− 2 + × − 2 +」という、ラベル文字列を
+一切持たない表記に単純化した(hfuさんの指示)。「2×3」という掛け算記法は
+グリッドサイズの表現として説明なしで通じる、という判断。
