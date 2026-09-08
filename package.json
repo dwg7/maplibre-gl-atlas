@@ -1,0 +1,62 @@
+{
+  "name": "@dwg7/maplibre-gl-atlas",
+  "version": "0.1.0",
+  "description": "Print a multi-sheet map atlas via the browser's native print pipeline — a MapLibre GL JS control.",
+  "type": "module",
+  "main": "./dist/maplibre-gl-atlas.cjs",
+  "module": "./dist/maplibre-gl-atlas.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/maplibre-gl-atlas.js",
+      "require": "./dist/maplibre-gl-atlas.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json --noEmit && vite build",
+    "dev": "vite build --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "maplibre",
+    "maplibre-gl",
+    "atlas",
+    "print",
+    "pdf",
+    "map"
+  ],
+  "author": "Hidenori FUJIMURA",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dwg7/maplibre-gl-atlas.git"
+  },
+  "homepage": "https://github.com/dwg7/maplibre-gl-atlas#readme",
+  "bugs": {
+    "url": "https://github.com/dwg7/maplibre-gl-atlas/issues"
+  },
+  "peerDependencies": {
+    "maplibre-gl": "^6.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.17.0",
+    "jsdom": "^25.0.1",
+    "maplibre-gl": "^6.8.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0",
+    "vite": "^6.0.3",
+    "vite-plugin-dts": "^4.3.0",
+    "vitest": "^2.1.8"
+  }
+}
