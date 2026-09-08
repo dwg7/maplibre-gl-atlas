@@ -35,7 +35,7 @@
     "map"
   ],
   "author": "Hidenori FUJIMURA",
-  "license": "MIT",
+  "license": "CC0-1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dwg7/maplibre-gl-atlas.git"

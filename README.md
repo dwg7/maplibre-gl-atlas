@@ -188,4 +188,7 @@ out correctly outside Chromium-based browsers.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+[CC0 1.0 Universal](LICENSE) (public domain dedication) — matching
+[dwg7/zukaku](https://github.com/dwg7/zukaku), the project this library was
+extracted from. See [DECISIONS.md](DECISIONS.md) D3/D5 for why this differs
+from most MapLibre plugins, which use MIT.

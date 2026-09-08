@@ -25,11 +25,12 @@ npmライブラリの問題を避けるため、`peerDependencies`とした
 (`opengeos/maplibre-gl-plugin-template`など、MapLibreエコシステムの
 プラグインの標準的な扱いに合わせた)。
 
-## D3: ライセンスはMIT(zukaku自体のCC0とは異なる)
+## D3: ライセンスはMIT(zukaku自体のCC0とは異なる) — **2026-09-08、D5により撤回**
 
 zukaku本体はCC0を採用しているが、npmで公開する再利用可能なライブラリと
 しては、エコシステムの標準であるMITライセンスの方が採用のハードルが低いと
-判断し、意図的にzukakuの前例から離れてMITを選んだ。
+判断し、意図的にzukakuの前例から離れてMITを選んだ。**この判断はD5で
+CC0に変更された。撤回の経緯を残すため本文は書き換えず残す。**
 
 ## D4: `role: "detail" | "index"`は追加するが、処理の分岐には使わない
 
@@ -48,3 +49,27 @@ ADR 0004](https://github.com/dwg7/zukaku/blob/main/adr/0004-terrain-and-fill-ext
 場合に`console.warn`する、という軽いガードのみをコントロールに持たせた。
 → [adr/0001](adr/0001-window-print-not-jspdf.md)、
 [dwg7/zukaku ADR 0004](https://github.com/dwg7/zukaku/blob/main/adr/0004-terrain-and-fill-extrusion-policy.md)
+
+## D5: ライセンスをMITからCC0に変更(2026-09-08、D3を撤回)
+
+D3でMITを選んだ後、著作権表示の名義をどうするかで再検討した。`dwg7`は
+UN Open GIS Initiativeのdomain working groupであり法人格を持たない
+——著作権は実際に書いたコード作者個人に帰属するのが原則なので、
+「Copyright (c) dwg7」はMITの雛形上、権利者を正確には示せない。しかも
+MITの著作権表示行は「複製物に含めること」という保持義務がライセンス本文に
+組み込まれており、この不正確な名義が将来のフォークすべてに複製され続ける
+ことになる。
+
+一方、CC0の標準テキスト(zukaku自身のLICENSEで確認済み)には、そもそも
+権利者名を書き込む決まった箇所がない——「the person associating CC0 with
+a Work (the "Affirmer")」という一般的な言い方をするだけで、下流の複製物に
+特定の名義を保持させる義務も発生しない。つまりCC0は「dwg7名義にしたいが
+法人格の観点で正確な言い方がない」という問題そのものを構造的に回避できる。
+加えて、zukaku本体が既にCC0を採用しており(「standing serverを持たない、
+すべて公開する」という一貫した思想)、姉妹プロジェクトもCC0にする方が
+dwg7組織としてのpublic domain姿勢に一貫性が出る。
+
+エンタープライズ導入時にCC0が一部のライセンススキャナーで手動レビュー
+対象になりうる、というMIT優位の実務的トレードオフは残るが、このライブラリの
+想定利用者(GIS/OSSコミュニティ、MapLibreエコシステム)を踏まえて許容した。
+→ [dwg7/zukakuのLICENSE](https://github.com/dwg7/zukaku/blob/main/LICENSE)(同一のCC0テキスト)

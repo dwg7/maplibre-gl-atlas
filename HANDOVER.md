@@ -54,7 +54,8 @@ PR 3: `scripts/render/page.html`の移行)はまだ着手していない。
 - リポジトリ名: `dwg7/maplibre-gl-atlas`(計画の推奨案どおり)。
 - `role`フィールド: 追加した(注釈のみ、処理分岐なし)。
 - `pageSize`/`margin`の一般化: v1に含めた(`src/layout.ts`)。
-- ライセンス: MIT。
+- ライセンス: ~~MIT~~ → **CC0に変更済み(2026-09-08、DECISIONS.md D5)**。
+  zukaku本体と同一のCC0テキストで統一した。
 - ライフサイクルフック: 単純コールバック形式(`Evented`ミックスインではない)。
 - 3PR分割: 提案通り3分割の前提でPR 1のみ実施。
 - `docs/index.html`からの読み込み方法(ESM CDN import vs ビルド導入):
