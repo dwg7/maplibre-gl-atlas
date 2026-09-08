@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>maplibre-gl-atlas example</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/maplibre-gl@^6/dist/maplibre-gl.css"
+/>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; }
+  #map { position: absolute; inset: 0; }
+  #banner {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 1;
+    padding: 6px 10px; font: 13px/1.4 system-ui, sans-serif;
+    background: rgba(255,255,255,0.9); border-bottom: 1px solid #ccc;
+  }
+  #banner a { color: #06c; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "maplibre-gl": "https://unpkg.com/maplibre-gl@^6/dist/maplibre-gl.mjs"
+  }
+}
+</script>
+</head>
+<body>
+<div id="banner">
+  <strong>@dwg7/maplibre-gl-atlas</strong> live demo — click the print button
+  (top-right of the map) to print a 3-sheet atlas. Not yet published to npm,
+  so this page loads a vendored build from <code>./vendor/</code> instead of
+  a CDN; see <a href="https://github.com/dwg7/maplibre-gl-atlas">the repo</a>
+  and <a href="https://github.com/dwg7/maplibre-gl-atlas/blob/main/examples/basic/index.html">examples/basic/index.html</a>
+  (the canonical, npm-based version of this same example).
+</div>
+<div id="map"></div>
+
+<script type="module">
+  // Same example as examples/basic/index.html, except AtlasControl is
+  // imported from a vendored copy of this repo's own build (./vendor/) built
+  // by `npm run build`, rather than from npm/unpkg — @dwg7/maplibre-gl-atlas
+  // hasn't been published yet (see HANDOVER.md). Once it is, this page
+  // should switch to the same unpkg import examples/basic/index.html uses,
+  // and ./vendor/ can be deleted.
+  import { Map } from "maplibre-gl";
+  import { AtlasControl } from "./vendor/maplibre-gl-atlas.js";
+
+  const DEMO_STYLE = "https://demotiles.maplibre.org/style.json";
+
+  // A hand-picked 1x3 strip over western Europe, split into three detail
+  // sheets plus one index sheet covering all three — deliberately not using
+  // any grid-computation helper, since this library has no such concept
+  // (see CLAUDE.md). A real caller (like dwg7/zukaku) would compute these
+  // bounds from a UI-driven grid instead of hardcoding them.
+  const cells = [
+    { ref: "A1", bounds: [[-5, 45], [0, 50]] },
+    { ref: "A2", bounds: [[0, 45], [5, 50]] },
+    { ref: "A3", bounds: [[5, 45], [10, 50]] },
+  ];
+  const overviewBounds = [
+    [-5, 45],
+    [10, 50],
+  ];
+
+  const map = new Map({
+    container: "map",
+    style: DEMO_STYLE,
+    center: [2.5, 47.5],
+    zoom: 4,
+  });
+
+  map.addControl(
+    new AtlasControl({
+      sheets: () => [
+        {
+          role: "index",
+          style: DEMO_STYLE,
+          bounds: overviewBounds,
+          padding: 40,
+          // Three cells side by side: inflate the offscreen stage 3x
+          // horizontally so this index sheet renders at roughly the same
+          // vector-tile zoom level the detail sheets below use (ADR 0009's
+          // zoom-level-shift technique, ported from dwg7/zukaku).
+          renderScale: { x: 3, y: 1 },
+          headerLeft: "Atlas Example",
+          headerRight: "Index",
+          decorate: (offscreenMap) => {
+            // The seam for atlas-specific drawing — this library has no
+            // idea what a "grid" is, so the caller draws its own reference
+            // rectangles/labels here, exactly like dwg7/zukaku's
+            // addOverviewGridLayers() does.
+            const features = cells.map((cell) => ({
+              type: "Feature",
+              properties: { ref: cell.ref },
+              geometry: {
+                type: "Polygon",
+                coordinates: [
+                  [
+                    [cell.bounds[0][0], cell.bounds[1][1]],
+                    [cell.bounds[1][0], cell.bounds[1][1]],
+                    [cell.bounds[1][0], cell.bounds[0][1]],
+                    [cell.bounds[0][0], cell.bounds[0][1]],
+                    [cell.bounds[0][0], cell.bounds[1][1]],
+                  ],
+                ],
+              },
+            }));
+            offscreenMap.addSource("example-grid", {
+              type: "geojson",
+              data: { type: "FeatureCollection", features },
+            });
+            offscreenMap.addLayer({
+              id: "example-grid-lines",
+              type: "line",
+              source: "example-grid",
+              paint: { "line-color": "#000", "line-width": 1.5 },
+            });
+            offscreenMap.addLayer({
+              id: "example-grid-labels",
+              type: "symbol",
+              source: "example-grid",
+              layout: {
+                "text-field": ["get", "ref"],
+                "text-size": 28,
+                "symbol-placement": "point",
+              },
+              paint: { "text-color": "#000", "text-halo-color": "#fff", "text-halo-width": 2 },
+            });
+          },
+        },
+        ...cells.map((cell) => ({
+          role: "detail",
+          style: DEMO_STYLE,
+          bounds: cell.bounds,
+          headerLeft: "Atlas Example",
+          headerRight: cell.ref,
+        })),
+      ],
+      onError: (err) => {
+        console.error("Atlas print failed:", err);
+        alert(`Atlas print failed: ${err}`);
+      },
+    }),
+    "top-right",
+  );
+</script>
+</body>
+</html>

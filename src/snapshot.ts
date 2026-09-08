@@ -14,8 +14,8 @@ export interface SnapshotResult {
  * Renders one `AtlasSheet` offscreen and returns a snapshot of it. This is
  * the single most load-bearing piece of ported logic in this project — see
  * dwg7/zukaku's `docs/index.html` `preparePrintPages()` and
- * `scripts/render/page.html`, and ADR 0002/0007/0009 for the three bugs
- * fixed here that must not regress:
+ * `scripts/render/page.html`, and ADR 0002/0007/0009 for three of the four
+ * bugs fixed here that must not regress:
  *
  *  1. The staging container is hidden with `position: fixed; opacity: 0;
  *     pointer-events: none`, NOT parked at a large negative offset
@@ -30,6 +30,13 @@ export interface SnapshotResult {
  *  3. `decorate()` runs inside the `load` handler, before the `idle` wait —
  *     layers/sources it adds must be present before `idle` fires so they're
  *     actually rendered into the snapshot.
+ *  4. `setProjection()`/`setTerrain()` are called inside the `load` handler,
+ *     never synchronously right after the constructor — maplibre-gl v6's
+ *     `Style` methods call `_checkLoaded()` internally and throw `Error:
+ *     Style is not done loading.` if the style hasn't finished loading yet.
+ *     Found by clicking through this repo's own `docs/index.html` demo in a
+ *     real browser (HANDOVER.md, 2026-09-08) — a static read of the source
+ *     alone would not have caught it.
  */
 export async function snapshotSheet(sheet: AtlasSheet, pageSize: PageSize): Promise<SnapshotResult> {
   const orientation: Orientation = sheet.orientation === "landscape" ? "landscape" : "portrait";
@@ -60,12 +67,6 @@ export async function snapshotSheet(sheet: AtlasSheet, pageSize: PageSize): Prom
   }
 
   const pageMap = new MapLibreMap(mapOptions);
-  // ADR 0004 (dwg7/zukaku): mercator only, never globe — an atlas depends on
-  // an orthogonal top-down page, same reasoning that rules out terrain
-  // below. maplibre-gl v6 has no constructor-time `projection` option;
-  // `setProjection()` is the supported way to force it regardless of what
-  // the style itself declares.
-  pageMap.setProjection({ type: "mercator" });
   // Scale bar only, relocated into the print footer by the caller — no
   // compass, since an atlas control has no opinion on whether rotation is
   // locked; that's a caller-level concern (see README).
@@ -75,6 +76,14 @@ export async function snapshotSheet(sheet: AtlasSheet, pageSize: PageSize): Prom
     await new Promise<void>((resolve, reject) => {
       pageMap.on("error", (e) => reject((e as { error?: unknown }).error ?? e));
       pageMap.on("load", () => {
+        // ADR 0004 (dwg7/zukaku): mercator only, never globe — an atlas
+        // depends on an orthogonal top-down page, same reasoning that rules
+        // out terrain below. maplibre-gl v6 has no constructor-time
+        // `projection` option; `setProjection()` is the supported way to
+        // force it regardless of what the style itself declares. It must be
+        // called after `load` — calling it synchronously right after the
+        // constructor throws "Style is not done loading."
+        pageMap.setProjection({ type: "mercator" });
         if (!sheet.terrain) {
           pageMap.setTerrain(null);
         }

@@ -28,13 +28,43 @@ PR 3: `scripts/render/page.html`の移行)はまだ着手していない。
   `.github/workflows/release.yml`(バージョンタグでnpm publish——
   **`NPM_TOKEN`シークレットは未設定**、実行しても失敗する。人間が設定
   してから初回リリースすること)。
+- ライブデモ: [docs/index.html](docs/index.html)——GitHub Pagesで公開
+  (2026-09-08、`docs/`をリポジトリのルートとして設定)。npm未公開のため
+  `docs/vendor/maplibre-gl-atlas.js`に`npm run build`の出力を手動で
+  コピーして参照している(`examples/basic/index.html`とは違いunpkg経由
+  ではない)。npm公開後はunpkg importに切り替え、`docs/vendor/`は削除
+  すること。
+
+## 2026-09-08: 実バグ1件発見・修正——`setProjection()`の呼び出しタイミング
+
+このGitHub Pagesデモをブラウザで実際にクリックして検証した際に発見。
+`snapshot.ts`で`pageMap.setProjection({type:"mercator"})`をmapコンストラクタ
+直後に同期呼び出ししていたが、maplibre-gl v6の`Style.setProjection()`は
+内部で`_checkLoaded()`を呼び、スタイルがロード完了する前に呼ぶと
+`Error: Style is not done loading.`を投げる。`map.on("load", ...)`
+ハンドラの中(`setTerrain(null)`と同じタイミング)に移動して修正した。
+`src/snapshot.ts`の関数doc冒頭のバグ一覧に4件目として追記済み。
+Playwrightだけでは検出できなかった類のバグ(コンストラクタ直後の同期呼び出しは
+静的解析だけでは見逃しやすい)——**実際にブラウザでクリックして検証する
+ことの価値を、このリポジトリ自身の開発中に再確認した**格好になった。
+
+**検証環境の注意**: このデモをClaude Codeのブラウザプレビューペインで検証した際、
+ペインが「表示されていない」状態(`document.hidden === true`)だと
+`requestAnimationFrame`がスロットルされ、MapLibreの内部レンダーループが
+進まず`load`イベントが数秒〜十数秒遅延する現象に遭遇した(cafebabeの
+`maplibre-gl-js-output-testing.md`にある「非表示ペインでコンテナが0x0に
+なりうる」と同系統だが、今回はコンテナサイズではなくrAFスロットリングが
+原因)。実際のユーザー操作(タブがフォアグラウンドの状態でボタンを押す)
+では発生しない、検証ツール特有の現象。
 
 ## 次にやること
 
 1. **実ブラウザでの手動検証**(macOS Chromium系・Windows Edge/Chrome、
-   計画§6の最低ライン)。`examples/basic/index.html`をそのまま使う。
-   まだ実施していない——このスキャフォールドはビルド・型チェック・
-   単体テストのみ確認済み。
+   計画§6の最低ライン)。`examples/basic/index.html`および
+   [docs/index.html](docs/index.html)のライブデモを使う。Claude Browserの
+   プレビューペインでのクリックスルー検証は完了(上記のsetProjection修正が
+   これで見つかった)が、macOS/Windowsの実機・実ブラウザでの確認は
+   まだ行っていない。
 2. **zukaku側PR 2**: `docs/index.html`(対話的印刷パス)をこのライブラリの
    消費に切り替える。`computePages()`はそのまま残し、
    `sheets: () => [...]`に変換、索引シートに`role:"index"`・
