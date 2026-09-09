@@ -354,16 +354,18 @@
 
     const overallNW = map.unproject([rect.left, rect.top]);
     const overallSE = map.unproject([rect.left + rect.width, rect.top + rect.height]);
-    // Whichever A4 orientation better matches the full grid's aspect ratio,
-    // so the index sheet doesn't waste paper on empty margins.
-    const overallAspect = (state.cols / state.rows) * A4_ASPECT[state.orientation];
-    const overviewOrientation = overallAspect >= 1 ? "landscape" : "portrait";
 
     const indexSheet = {
       role: "index",
       style: DEMO_STYLE,
       bounds: [overallNW.lng, overallSE.lat, overallSE.lng, overallNW.lat],
-      orientation: overviewOrientation,
+      // Always matches the chosen orientation — deliberately not
+      // auto-selected from the grid's aspect ratio (dwg7/zukaku ADR 0005
+      // does auto-select it, to avoid wasted margin on lopsided grids, but
+      // that means picking "portrait" can silently produce a landscape
+      // index sheet; asked to keep every sheet's orientation consistent
+      // with what's shown in the panel instead).
+      orientation: state.orientation,
       headerLeft,
       headerRight: "Index",
       // Breathing room around the grid block, scaled with the grid so it

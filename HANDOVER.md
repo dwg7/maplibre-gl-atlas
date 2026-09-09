@@ -236,6 +236,23 @@ D9実装直後、「×と+はPrintボタンを押す前から出ていい。索�
 **今後この種の検証では、`wait`を連続して呼ばず、数秒おきに`screenshot`を
 挟みながら待つこと。**
 
+## 2026-09-09: 索引ページの向き自動選択を廃止、常に選択中の`orientation`に一致(デモのみ)
+
+「1×3グリッドでportraitを選んでも索引ページだけlandscapeになる」との報告。
+詳細は[adr/0002の追記(2026-09-09、4件目)](adr/0002-print-review-step.md)参照。
+
+- 原因: `computeSheets()`が索引ページの向きをグリッド全体のアスペクト比から
+  自動選択していた(zukaku ADR 0005の踏襲)。UIには単一の`orientation`
+  トグルしか無く、この自動選択の存在が分かりにくかった。
+- zukaku通りの自動選択を残すか、常に統一するか確認したところ、**常に
+  選択中の`orientation`に一致させる**方を選択(「全ページ同じ向きで揃う」
+  分かりやすさを優先)。
+- `examples/basic/`・`docs/`の`computeSheets()`から`overallAspect`/
+  `overviewOrientation`の算出を削除し、`indexSheet.orientation`を
+  `state.orientation`に単純化。ライブラリ本体(`src/`)は無関係。
+- 実機検証: 1行×3列・portraitで、生成された4シートすべてが
+  `portrait-page`になることを確認(修正前はIndexだけ`landscape-page`)。
+
 ## 次にやること
 
 1. **実ブラウザでの手動検証**(macOS Chromium系・Windows Edge/Chrome、

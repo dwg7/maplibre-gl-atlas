@@ -203,3 +203,29 @@ zukaku本体のSave Paper(ADR 0008)を再確認すると、×/+トグルは**印
 `load`/`decorate`/`idle`が実際には正常な順序で発火し続けていることを
 確認して切り分けた)。今後この種の検証では、`wait`だけで長時間待たず、
 数秒おきに`screenshot`を挟むこと。
+
+## 追記(2026-09-09、4件目): 索引ページの向き自動選択をやめ、選択中の`orientation`に常に一致させる
+
+hfuさんから「1×3グリッドでportraitを選んでも、p.1(索引ページ)だけ
+landscapeになる。p.2以降はportraitのまま」という報告。原因は
+`computeSheets()`が索引ページの向きを`state.orientation`とは独立に、
+グリッド全体のアスペクト比から自動選択していたため
+(`dwg7/zukaku ADR 0005`の「余白の無駄を避けるため」という設計を
+そのまま踏襲していた)。1行×3列の場合、3セット横並びのportraitページ
+全体は横長になるため、自動的にlandscapeが選ばれていた。
+
+UI上は単一の`orientation`トグルボタンしか無く、「索引ページだけ別ロジックで
+向きが決まる」ことを示す手がかりが無かったため、意図しない挙動に見える、
+という指摘は妥当だった。zukakuの自動選択ロジックを踏襲するか、常に
+選択中の向きに統一するか2択で確認したところ、**常に統一する**方を
+選んだ——「全ページ同じ向きで揃う」という分かりやすさを、余白の
+無駄より優先する判断。
+
+**変更内容**: `computeSheets()`から`overallAspect`/`overviewOrientation`の
+算出を削除し、`indexSheet.orientation`を単純に`state.orientation`とした。
+`examples/basic/`・`docs/`の両方に同じ変更。ライブラリ本体(`src/`)は
+無関係——デモの`computeSheets()`だけの変更。
+
+**実機検証**: 1行×3列・portraitで印刷し、生成された4シート
+(Index/A1/A2/A3)すべてが`portrait-page`クラスを持つことを確認した
+(修正前はIndexだけ`landscape-page`になっていた)。
