@@ -6,16 +6,20 @@
 
 [dwg7/zukaku#8](https://github.com/dwg7/zukaku/issues/8)への対応として、
 zukakuの「Print in Browser」機能(zukaku ADR 0007/0009)から、汎用的な
-MapLibre GL JSコントロールとして切り出した。この移行計画3PR中の**PR 1
-(本リポジトリの構築)は完了・実機検証済み**——zukaku側(PR 2:
-`docs/index.html`の移行、PR 3: `scripts/render/page.html`の移行)は
-まだ着手していない。2026-09-08〜09、デモを実際にクリックスルー検証する
-過程で実バグ2件(`setProjection()`のタイミング、スケールバーの
-`renderScale`補正漏れ——後者はzukaku本体にも現存)を発見・修正し、
-`review()`(印刷前の確認ステップ)の追加→zukaku Save Paper相当の
-on-map ×/+トグルへの作り直し→索引ページの向き自動選択の廃止、と
-UI/UXを複数回りイテレーションした。2026-09-10、zukaku統合の前段として
-Atlasモードのプログラム的な有効化(デモのみ)を完了した。最新の状態・
+MapLibre GL JSコントロールとして切り出した。この移行計画3PR中、**PR 1
+(本リポジトリの構築)・PR 2(zukaku側`docs/index.html`の消費側切り替え、
+[zukaku ADR 0012](https://github.com/dwg7/zukaku/blob/main/adr/0012-consume-maplibre-gl-atlas-library.md))
+は完了・実機検証済み**。PR 3(zukaku側`scripts/render/`のPlaywright経路)は
+設計を提案([zukaku ADR 0013](https://github.com/dwg7/zukaku/blob/main/adr/0013-playwright-pipeline-atlascontrol-migration.md)、
+未承認)した段階で実装は保留中——本番のGitHub Actionsパイプラインに
+対する根本的な設計変更のため、実装より先にhfuさんの承認を得る方針。
+2026-09-08〜09、デモを実際にクリックスルー検証する過程で実バグ2件
+(`setProjection()`のタイミング、スケールバーの`renderScale`補正漏れ
+——後者はzukaku本体にも現存)を発見・修正し、`review()`(印刷前の確認
+ステップ)の追加→zukaku Save Paper相当のon-map ×/+トグルへの作り直し
+→索引ページの向き自動選択の廃止、とUI/UXを複数回りイテレーションした。
+2026-09-10、zukaku統合の前段としてAtlasモードのプログラム的な有効化
+(デモのみ)を完了し、続けてzukaku側PR 2を実施した。最新の状態・
 次の作業方針は下の「2026-09-10」節と「次にやること」参照。
 
 - スコープ・設計原則は[CLAUDE.md](CLAUDE.md)参照。
@@ -285,28 +289,38 @@ zukaku統合の前段として、デモの`setAtlasMode(on)`がトグルボタ�
 
 **方針(2026-09-10、hfuさん指示)**: ①「Atlasモードを JS側からenableできる
 ようにする」→②「zukaku本体の実装にこのライブラリを使う」という順で
-進める。①は上の「2026-09-10」節で完了。次は②(zukaku側PR 2/3)に進む。
+進める。①は上の「2026-09-10」節で完了。②のうちzukaku側PR 2は完了、
+PR 3は設計を提案しhfuさんの承認待ち(下記)。
 
-1. **zukaku側PR 2**: `docs/index.html`(対話的印刷パス)をこのライブラリの
-   消費に切り替える。`computePages()`はそのまま残し、
-   `sheets: () => [...]`に変換、索引シートに`role:"index"`・
-   `decorate: (map) => addOverviewGridLayers(map, spec.grid, labelScale)`を
-   渡す。デモで確立したSave Paper相当のon-map ×/+トグル・状態遷移
-   (⓪/①/②)のパターンをzukaku自身のUIに合わせて移植する。zukaku既存の
-   範囲指定入口から`setAtlasMode`相当の関数を直接呼ぶ形にし、デモの
-   `AtlasModeToggle`(専用トグルボタン)は持ち込まない。
-2. **zukaku側PR 3**: `scripts/render/page.html`(Playwright経路)の移行。
-   `AtlasControl.prepare()`を使う(`print()`ではなく——`window.print()`は
-   呼ばれず、Playwright側の`page.pdf()`が実際のトリガーになるため)。
+1. **zukaku側PR 2(完了、2026-09-10)**: `docs/index.html`(対話的印刷パス)を
+   このライブラリの消費に切り替えた——[zukaku ADR 0012](https://github.com/dwg7/zukaku/blob/main/adr/0012-consume-maplibre-gl-atlas-library.md)
+   参照。`computePages()`(Share/JSON/Actions向け)は無変更のまま、新規
+   `computeSheets()`アダプタを追加する形。zukaku自身の`renderGrid()`の
+   ×/+トグルは元々`docs/index.html`に実装済みだった(このライブラリの
+   デモが後からそれを模倣した経緯)ため、`AtlasModeToggle`のような専用の
+   状態遷移トグルは移植していない——zukakuには元々「アトラスモードの
+   外」という状態が無く、範囲指定UIは常時グリッド編集画面だったため。
+   副次的に、概要ページの向きを常に統一する変更(D11と同じ)をzukaku側にも
+   適用し、[zukaku D15](https://github.com/dwg7/zukaku/blob/main/DECISIONS.md)
+   (Windows専用の回避策)を実質的に不要にした。
+2. **zukaku側PR 3(提案中、未承認)**: `scripts/render/`(Playwright/GitHub
+   Actions経路)の移行。当初「`AtlasControl.prepare()`を使う」という粒度
+   でしか想定していなかったが、実際の`scripts/render/lib.js`/`atlas.js`は
+   「1ページ=1つの独立したPlaywright `BrowserContext`+個別`page.pdf()`を
+   `pdf-lib`で結合」という設計で、`prepare()`が前提とする「1ページに全
+   シートを構築し`page.pdf()`を1回だけ呼ぶ」モデルとは根本的に異なる
+   ——単純な置き換えでは済まない。本番のGitHub Actionsパイプラインである
+   ため、設計案・検討事項・検証計画を[zukaku ADR 0013](https://github.com/dwg7/zukaku/blob/main/adr/0013-playwright-pipeline-atlascontrol-migration.md)
+   にまとめ、実装はhfuさんの承認待ちで止めてある。
 3. **実ブラウザでの手動検証**(macOS Chromium系・Windows Edge/Chrome、
-   計画§6の最低ライン)。`examples/basic/index.html`および
-   [docs/index.html](docs/index.html)のライブデモを使う。Claude Browserの
-   プレビューペインでのクリックスルー検証は完了(setProjection修正・
-   スケールバー修正・`review()`関連・on-map ×/+トグル・索引ページの向き
-   修正・Atlasモードのプログラム的有効化、一通りの動作を確認済み)が、
+   計画§6の最低ライン)。`examples/basic/index.html`・
+   [docs/index.html](docs/index.html)・zukaku本体の
+   [docs/index.html](https://dwg7.github.io/zukaku/)のいずれも、Claude
+   Browserのプレビューペインでのクリックスルー検証は完了しているが、
    macOS/Windowsの実機・実ブラウザでの確認はまだ行っていない。
 4. `NPM_TOKEN`を設定し、`v0.1.0`タグを打って初回npm公開(人間の作業、
-   CLAUDE.md 5節)。
+   CLAUDE.md 5節)。公開後はzukaku側の`docs/vendor/`をunpkg importに
+   切り替えて削除する。
 
 ## 未検討のまま進めた判断(実装時のデフォルト選択)
 

@@ -89,12 +89,14 @@ map.addControl(
 ```
 
 Clicking the control's print button opens an interactive **review panel**
-first (how many sheets, where each one is — outlined on the live map for
-sheets with `bounds` — with a checkbox to drop any before printing). This is
-what most users need: they decide what actually gets printed, not just how
-many pages a caller pre-computed. Set `confirm: false` if your own UI already
-lets people choose what to print and this step would be redundant — the
-button then calls `print()` directly, same as before. Calling
+first: a small circular ×/+ toggle button anchored to each sheet directly on
+the live map (for sheets with `bounds` or `center`), so you can drop any of
+them before printing — plus a compact panel showing the selected count and
+Print/Cancel. (A caller with no `map` reference falls back to a checkbox
+list.) This is what most users need: they decide what actually gets printed,
+not just how many pages a caller pre-computed. Set `confirm: false` if your
+own UI already lets people choose what to print and this step would be
+redundant — the button then calls `print()` directly, same as before. Calling
 `atlasControl.print()`/`.prepare()` yourself (e.g. from your own UI with
 `showButton: false`, or headlessly via Playwright) never shows the review
 panel either way — see [adr/0002](adr/0002-print-review-step.md). Both build

@@ -85,8 +85,13 @@ MapLibre GL JS用の`map.addControl()`スタイルのコントロール。ブラ
 ## 4. 姉妹プロジェクトとの関係
 
 - [dwg7/zukaku](https://github.com/dwg7/zukaku) — このライブラリの切り出し元。
-  zukaku自身がこのライブラリを消費する移行はzukaku側の別PR(zukaku側の
-  計画ドキュメント参照)であり、このリポジトリのスコープではない。
+  zukaku自身がこのライブラリを消費する移行はzukaku側の別PR(3PR計画、
+  [zukaku#8](https://github.com/dwg7/zukaku/issues/8))であり、このリポジトリの
+  スコープではない。`docs/index.html`(対話的印刷パス)の移行は
+  [zukaku ADR 0012](https://github.com/dwg7/zukaku/blob/main/adr/0012-consume-maplibre-gl-atlas-library.md)で
+  完了済み。`scripts/render/`(Playwright/GitHub Actions経路)の移行は
+  [zukaku ADR 0013](https://github.com/dwg7/zukaku/blob/main/adr/0013-playwright-pipeline-atlascontrol-migration.md)で
+  提案中(未承認)。
 - [dwg7/cafebabe](https://github.com/dwg7/cafebabe) — 「WebGLキャンバスは
   印刷パイプラインに直接含められない」等、複数プロジェクトに横断する一般則
   はcafebabe側に残す。このリポジトリのADRには「その一般則をどう実装で
@@ -101,5 +106,7 @@ MapLibre GL JS用の`map.addControl()`スタイルのコントロール。ブラ
 
 ## 6. 現在のステータス
 
-詳細は[HANDOVER.md](HANDOVER.md)参照。v1スキャフォールド済み、npm未公開、
-zukaku側からはまだ消費されていない。
+詳細は[HANDOVER.md](HANDOVER.md)参照。v1完成・実機デバッグ済み、npm未公開
+(ビルド成果物をzukaku側に手動vendor)。zukaku側の`docs/index.html`は
+これを実際に消費している(zukaku ADR 0012)——`scripts/render/`側は提案
+段階(zukaku ADR 0013、未承認)。
