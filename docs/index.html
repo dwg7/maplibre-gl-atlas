@@ -25,10 +25,26 @@
   #grid-overlay {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
     z-index: 5; pointer-events: none; display: none;
+    outline: 2px solid rgba(0, 0, 0, 0.6);
   }
   #grid-overlay.visible { display: grid; }
-  #grid-overlay { outline: 2px solid rgba(0, 0, 0, 0.6); }
-  #grid-overlay .cell { border: 1px solid rgba(0, 0, 0, 0.6); box-sizing: border-box; }
+  #grid-overlay .cell { position: relative; border: 1px solid rgba(0, 0, 0, 0.6); box-sizing: border-box; }
+  /* Save Paper (dwg7/zukaku ADR 0008): a grayed-out cell is omitted from
+     printing — the index/overview sheet itself has no such toggle, only
+     the individual detail cells do (there's nothing to "exclude" about the
+     one sheet that always covers the whole grid). */
+  #grid-overlay .cell.excluded { background: rgba(0, 0, 0, 0.35); }
+  #grid-overlay .cell-toggle {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.5); background: rgba(255, 255, 255, 0.9);
+    font-size: 13px; line-height: 20px; text-align: center; color: #333;
+    cursor: pointer;
+    /* The one part of a cell that opts back into receiving clicks — the
+       rest of #grid-overlay stays pointer-events:none so drag-to-pan still
+       reaches the map underneath it. */
+    pointer-events: auto;
+  }
 
   /* Atlas panel — the state-① UI: grid size/orientation, Print, and the
      title field. Hidden until atlas mode is entered via the toggle button. */
@@ -52,6 +68,7 @@
     background: #1a73e8; color: #fff; font-weight: bold;
   }
   #title-input { width: 220px; padding: 3px 6px; font: inherit; border: 1px solid #999; border-radius: 3px; }
+  #page-estimate { font-size: 11px; color: #666; }
 
   /* Custom top-right toggle button (⓪⇄①) — matches maplibregl's own
      control button chrome so it sits alongside NavigationControl etc.
@@ -94,6 +111,9 @@
   <div class="row">
     <input id="title-input" type="text" placeholder="Map title (optional)" maxlength="60">
   </div>
+  <div class="row">
+    <span id="page-estimate"></span>
+  </div>
 </div>
 
 <script type="module">
@@ -115,7 +135,17 @@
   const A4_ASPECT = { portrait: 210 / 297, landscape: 297 / 210 };
   const BASE_CELL_WIDTH = 130; // on-screen preview cell width, CSS px
 
-  const state = { rows: 1, cols: 3, orientation: "portrait", title: "", atlasMode: false };
+  const state = {
+    rows: 1,
+    cols: 3,
+    orientation: "portrait",
+    title: "",
+    atlasMode: false,
+    // Save Paper (dwg7/zukaku ADR 0008): "r,c" keys of grid cells to omit
+    // from printing. Cleared whenever rows/cols change, since a stored
+    // position may no longer exist or may now mean a different cell.
+    excludedCells: new Set(),
+  };
 
   const map = new Map({
     container: "map",
@@ -134,18 +164,16 @@
   });
   map.touchZoomRotate.disableRotation();
 
-  // --- m x n grid + orientation, ported from dwg7/zukaku's docs/index.html
-  // (renderGrid()/computePages(), ADR 0005) — this is *the* fix for two
-  // problems an earlier, hardcoded-bounds version of this example had: no
-  // way to change how many sheets print, and a paper aspect ratio that
-  // didn't actually match the printed page (hand-picked lng/lat spans have
-  // no reason to land on 210:297). Deriving each cell's bounds from
-  // map.unproject() on a screen-space rectangle that's already sized to the
-  // target page aspect ratio fixes both at once.
+  // --- m x n grid + orientation + Save Paper, ported from dwg7/zukaku's
+  // docs/index.html (renderGrid()/computePages(), ADR 0005/0008). Deriving
+  // each cell's bounds from map.unproject() on a screen-space rectangle
+  // that's already sized to the target page aspect ratio keeps the printed
+  // paper's aspect ratio correct regardless of grid size or orientation.
   const gridOverlay = document.getElementById("grid-overlay");
   const rowsValue = document.getElementById("rows-value");
   const colsValue = document.getElementById("cols-value");
   const orientationToggle = document.getElementById("orientation-toggle");
+  const pageEstimate = document.getElementById("page-estimate");
 
   function renderGrid() {
     const aspect = A4_ASPECT[state.orientation]; // width / height
@@ -162,16 +190,40 @@
     gridOverlay.style.width = `${totalWidth * scale}px`;
     gridOverlay.style.height = `${totalHeight * scale}px`;
 
+    // Row-major order matches grid-template-columns/rows filling order, and
+    // must match computeSheets()'s (r, c) iteration so excludedCells keys agree.
     gridOverlay.innerHTML = "";
-    for (let i = 0; i < state.rows * state.cols; i++) {
-      const cell = document.createElement("div");
-      cell.className = "cell";
-      gridOverlay.appendChild(cell);
+    for (let r = 0; r < state.rows; r++) {
+      for (let c = 0; c < state.cols; c++) {
+        const key = `${r},${c}`;
+        const excluded = state.excludedCells.has(key);
+
+        const cell = document.createElement("div");
+        cell.className = excluded ? "cell excluded" : "cell";
+        cell.dataset.row = String(r);
+        cell.dataset.col = String(c);
+
+        // The ×/+ toggle is visible as soon as the grid is (state ①) — no
+        // need to open a separate confirmation step first to see or use it,
+        // same as dwg7/zukaku's Save Paper. Only detail cells get one; the
+        // index/overview sheet always prints.
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "cell-toggle";
+        toggle.textContent = excluded ? "+" : "×";
+        toggle.title = excluded ? "Include this sheet" : "Exclude this sheet from printing";
+        cell.appendChild(toggle);
+
+        gridOverlay.appendChild(cell);
+      }
     }
 
     rowsValue.textContent = String(state.rows);
     colsValue.textContent = String(state.cols);
     orientationToggle.textContent = state.orientation;
+
+    const detailCount = state.rows * state.cols - state.excludedCells.size;
+    pageEstimate.textContent = `${detailCount + 1} sheets (incl. index)`;
   }
 
   document.getElementById("atlas-panel").addEventListener("click", (e) => {
@@ -180,6 +232,7 @@
       const key = stepBtn.dataset.adjust;
       const delta = Number(stepBtn.dataset.delta);
       state[key] = Math.min(6, Math.max(1, state[key] + delta));
+      state.excludedCells.clear(); // grid positions have shifted, stale otherwise
       renderGrid();
       return;
     }
@@ -190,6 +243,20 @@
   });
   document.getElementById("title-input").addEventListener("input", (e) => {
     state.title = e.target.value.trim();
+  });
+  // Save Paper: toggle a single cell's excluded state. Delegated on
+  // gridOverlay since cells are recreated by every renderGrid() call.
+  gridOverlay.addEventListener("click", (e) => {
+    const btn = e.target.closest(".cell-toggle");
+    if (!btn) return;
+    const cell = btn.closest(".cell");
+    const key = `${cell.dataset.row},${cell.dataset.col}`;
+    if (state.excludedCells.has(key)) {
+      state.excludedCells.delete(key);
+    } else {
+      state.excludedCells.add(key);
+    }
+    renderGrid();
   });
   window.addEventListener("resize", () => {
     if (state.atlasMode) renderGrid();
@@ -203,11 +270,12 @@
   // showButton:true) doesn't fit that: it's a single-purpose print
   // trigger. So this example drives AtlasControl with showButton:false and
   // supplies its own top-right toggle button instead, whose only job is
-  // entering/leaving the grid-editing UI below (state ①). The actual
-  // print action (state ②) lives inside that UI, as the dedicated Print
-  // button, which calls the control's own review()/print() — see adr/0002
-  // in the library repo for why review() (not print() directly) is the
-  // right thing for a human-facing button to call.
+  // entering/leaving the grid-editing UI below (state ①). Printing
+  // (state ②) calls the control's print() directly — not review() — since
+  // the grid itself (with its own Save Paper toggles, visible the moment
+  // you enter atlas mode) already *is* the "decide what prints" step,
+  // matching dwg7/zukaku's own UX exactly: there's no second confirmation
+  // dialog on top of it.
   class AtlasModeToggle {
     onAdd() {
       this.container = document.createElement("div");
@@ -261,7 +329,7 @@
     const headerLeft = state.title ? `Atlas Example: ${state.title}` : "Atlas Example";
 
     const detailSheets = [];
-    const cells = [];
+    const cells = []; // every grid position, including excluded ones — for the index sheet's own drawing
     for (let r = 0; r < state.rows; r++) {
       for (let c = 0; c < state.cols; c++) {
         const left = rect.left + c * cellWidth;
@@ -270,7 +338,9 @@
         const se = map.unproject([left + cellWidth, top + cellHeight]);
         const ref = `${String.fromCharCode(65 + r)}${c + 1}`;
         const bounds = [nw.lng, se.lat, se.lng, nw.lat]; // west, south, east, north
-        cells.push({ ref, bounds });
+        const excluded = state.excludedCells.has(`${r},${c}`);
+        cells.push({ ref, bounds, excluded });
+        if (excluded) continue; // Save Paper: simply not printed — no renumbering needed
         detailSheets.push({
           role: "detail",
           style: DEMO_STYLE,
@@ -307,10 +377,13 @@
         // The seam for atlas-specific drawing — this library has no idea
         // what a "grid" is, so the caller draws its own reference
         // rectangles/labels here, exactly like dwg7/zukaku's
-        // addOverviewGridLayers() does.
+        // addOverviewGridLayers() does. Excluded cells stay outlined (so
+        // the grid shape still reads) but get a gray fill and no
+        // reference label — the same visual language as the on-screen
+        // Save Paper toggle.
         const features = cells.map((cell) => ({
           type: "Feature",
-          properties: { ref: cell.ref },
+          properties: { ref: cell.ref, excluded: cell.excluded },
           geometry: {
             type: "Polygon",
             coordinates: [
@@ -329,6 +402,12 @@
           data: { type: "FeatureCollection", features },
         });
         offscreenMap.addLayer({
+          id: "example-grid-excluded-fill",
+          type: "fill",
+          source: "example-grid",
+          paint: { "fill-color": "#000", "fill-opacity": ["case", ["get", "excluded"], 0.15, 0] },
+        });
+        offscreenMap.addLayer({
           id: "example-grid-lines",
           type: "line",
           source: "example-grid",
@@ -338,6 +417,7 @@
           id: "example-grid-labels",
           type: "symbol",
           source: "example-grid",
+          filter: ["!", ["get", "excluded"]],
           layout: {
             "text-field": ["get", "ref"],
             "text-size": 28,
@@ -365,7 +445,7 @@
   map.addControl(atlasToggle, "top-right");
 
   document.getElementById("print-btn").addEventListener("click", () => {
-    atlasControl.review().catch((err) => console.error("Atlas print failed:", err));
+    atlasControl.print().catch((err) => console.error("Atlas print failed:", err));
   });
 </script>
 </body>
