@@ -2,13 +2,20 @@
 
 `@dwg7/maplibre-gl-atlas`の現在の状態。次にこれを引き継ぐ人(人間でもAIでも)向け。
 
-## 現状(2026-09-08時点) — v1スキャフォールド完了、npm未公開
+## 現状(2026-09-10時点) — v1完成、実機デバッグ済み、npm未公開
 
 [dwg7/zukaku#8](https://github.com/dwg7/zukaku/issues/8)への対応として、
 zukakuの「Print in Browser」機能(zukaku ADR 0007/0009)から、汎用的な
 MapLibre GL JSコントロールとして切り出した。この移行計画3PR中の**PR 1
-(本リポジトリの構築)のみ完了**——zukaku側(PR 2: `docs/index.html`の移行、
-PR 3: `scripts/render/page.html`の移行)はまだ着手していない。
+(本リポジトリの構築)は完了・実機検証済み**——zukaku側(PR 2:
+`docs/index.html`の移行、PR 3: `scripts/render/page.html`の移行)は
+まだ着手していない。2026-09-08〜09、デモを実際にクリックスルー検証する
+過程で実バグ2件(`setProjection()`のタイミング、スケールバーの
+`renderScale`補正漏れ——後者はzukaku本体にも現存)を発見・修正し、
+`review()`(印刷前の確認ステップ)の追加→zukaku Save Paper相当の
+on-map ×/+トグルへの作り直し→索引ページの向き自動選択の廃止、と
+UI/UXを複数回りイテレーションした。最新の状態・次の作業方針は
+下の「2026-09-10」節と「次にやること」参照。
 
 - スコープ・設計原則は[CLAUDE.md](CLAUDE.md)参照。
 - API設計・命名の経緯は[DECISIONS.md](DECISIONS.md)・[adr/0001](adr/0001-window-print-not-jspdf.md)・
@@ -255,22 +262,37 @@ D9実装直後、「×と+はPrintボタンを押す前から出ていい。索�
 
 ## 次にやること
 
-1. **実ブラウザでの手動検証**(macOS Chromium系・Windows Edge/Chrome、
+**方針(2026-09-10、hfuさん指示)**: 次の作業は、①「Atlasモードを
+JS側からenableできるようにする」→②「zukaku本体の実装にこのライブラリを
+使う」という順で進める。デモの`AtlasModeToggle`は現状、トグルボタンの
+クリックからしか`setAtlasMode(on)`を呼べない(状態⓪⇄①の切り替えが
+ユーザーのクリックだけに紐づいている)。zukaku側は独自のUI・状態管理
+(URL hash復元、Save Paper、タイトル入力等)を持つため、ボタンクリック
+以外の経路(プログラム的な初期化・状態復元等)からもAtlasモードに
+入れる必要がある。①をまず一般化してから、②(zukaku側PR 2/3)に進むこと。
+
+1. **Atlasモードのプログラム的な有効化**(新規、②の前提)。デモの
+   `setAtlasMode(on)`/`AtlasModeToggle`パターンを、クリック起点に限定
+   しない形へ一般化する(例: 呼び出し側から直接呼べる関数・コールバック
+   として整理するか、`AtlasControl`自体に組み込むかは要検討)。zukaku側が
+   自分のUI・状態管理からAtlasモードの開始/終了を制御できることがゴール。
+2. **実ブラウザでの手動検証**(macOS Chromium系・Windows Edge/Chrome、
    計画§6の最低ライン)。`examples/basic/index.html`および
    [docs/index.html](docs/index.html)のライブデモを使う。Claude Browserの
    プレビューペインでのクリックスルー検証は完了(setProjection修正・
-   スケールバー修正・`review()`の一覧表示/チェックボックス調整/確認/
-   キャンセルの一通りの動作を確認済み)が、macOS/Windowsの実機・実ブラウザ
-   での確認はまだ行っていない。
-2. **zukaku側PR 2**: `docs/index.html`(対話的印刷パス)をこのライブラリの
+   スケールバー修正・`review()`関連・on-map ×/+トグル・索引ページの向き
+   修正、一通りの動作を確認済み)が、macOS/Windowsの実機・実ブラウザでの
+   確認はまだ行っていない。
+3. **zukaku側PR 2**: `docs/index.html`(対話的印刷パス)をこのライブラリの
    消費に切り替える。`computePages()`はそのまま残し、
    `sheets: () => [...]`に変換、索引シートに`role:"index"`・
    `decorate: (map) => addOverviewGridLayers(map, spec.grid, labelScale)`を
-   渡す。`showButton:false`で既存の自前ボタンを維持。
-3. **zukaku側PR 3**: `scripts/render/page.html`(Playwright経路)の移行。
+   渡す。デモで確立したSave Paper相当のon-map ×/+トグル・状態遷移
+   (⓪/①/②)のパターンをzukaku自身のUIに合わせて移植する。
+4. **zukaku側PR 3**: `scripts/render/page.html`(Playwright経路)の移行。
    `AtlasControl.prepare()`を使う(`print()`ではなく——`window.print()`は
    呼ばれず、Playwright側の`page.pdf()`が実際のトリガーになるため)。
-4. `NPM_TOKEN`を設定し、`v0.1.0`タグを打って初回npm公開(人間の作業、
+5. `NPM_TOKEN`を設定し、`v0.1.0`タグを打って初回npm公開(人間の作業、
    CLAUDE.md 5節)。
 
 ## 未検討のまま進めた判断(実装時のデフォルト選択)
