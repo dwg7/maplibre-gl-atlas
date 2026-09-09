@@ -1,20 +1,20 @@
-var L = Object.defineProperty;
-var P = (n, t, e) => t in n ? L(n, t, { enumerable: !0, configurable: !0, writable: !0, value: e }) : n[t] = e;
-var p = (n, t, e) => P(n, typeof t != "symbol" ? t + "" : t, e);
-import { Map as M, ScaleControl as R, LngLatBounds as N } from "maplibre-gl";
-const _ = { width: 210, height: 297 }, g = 15;
-function x(n) {
-  return n ?? _;
+var P = Object.defineProperty;
+var N = (n, t, e) => t in n ? P(n, t, { enumerable: !0, configurable: !0, writable: !0, value: e }) : n[t] = e;
+var p = (n, t, e) => N(n, typeof t != "symbol" ? t + "" : t, e);
+import { Map as _, ScaleControl as A, LngLatBounds as T } from "maplibre-gl";
+const k = { width: 210, height: 297 }, u = 15;
+function $(n) {
+  return n ?? k;
 }
-function A(n) {
-  return n == null ? { top: g, right: g, bottom: g, left: g } : typeof n == "number" ? { top: n, right: n, bottom: n, left: n } : {
-    top: n.top ?? g,
-    right: n.right ?? g,
-    bottom: n.bottom ?? g,
-    left: n.left ?? g
+function z(n) {
+  return n == null ? { top: u, right: u, bottom: u, left: u } : typeof n == "number" ? { top: n, right: n, bottom: n, left: n } : {
+    top: n.top ?? u,
+    right: n.right ?? u,
+    bottom: n.bottom ?? u,
+    left: n.left ?? u
   };
 }
-function k() {
+function B() {
   return `
 #maplibre-gl-atlas-print-root { display: none; }
 @media print {
@@ -29,8 +29,8 @@ function k() {
 }
 `;
 }
-function B(n) {
-  const t = A(n), e = t.top / 3, i = t.top / 3, o = t.bottom / 5;
+function D(n) {
+  const t = z(n), e = t.top / 3, i = t.top / 3, o = t.bottom / 5;
   return `
 @media print {
   #maplibre-gl-atlas-print-root .print-page-inner .print-map {
@@ -62,30 +62,30 @@ function B(n) {
 }
 `;
 }
-function z(n) {
+function O(n) {
   const t = n ?? (typeof navigator < "u" ? navigator : void 0);
   if (!t) return !1;
   const e = t.userAgentData;
   return e && e.platform ? e.platform === "Windows" : /Windows/i.test(t.userAgent || "");
 }
-function D() {
-  return z() ? "rotate" : "mixed";
+function j() {
+  return O() ? "rotate" : "mixed";
 }
-function E(n) {
-  return !n || n === "auto" ? D() : n;
+function C(n) {
+  return !n || n === "auto" ? j() : n;
 }
-function O(n) {
+function F(n) {
   const t = n.filter((e) => e === "landscape").length;
   return t > n.length - t ? "landscape" : "portrait";
 }
-function T(n) {
+function I(n) {
   return {
     width: Math.min(n.width, n.height),
     height: Math.max(n.width, n.height)
   };
 }
-function j(n, t) {
-  const { width: e, height: i } = T(x(n));
+function H(n, t) {
+  const { width: e, height: i } = I($(n));
   return t === "mixed" ? `
 @page atlas-portrait { size: ${e}mm ${i}mm; margin: 0; }
 @page atlas-landscape { size: ${i}mm ${e}mm; margin: 0; }
@@ -114,23 +114,23 @@ function j(n, t) {
 }
 `;
 }
-const F = 96, I = 25.4;
-function $(n) {
-  return n * F / I;
+const G = 96, U = 25.4;
+function S(n) {
+  return n * G / U;
 }
-function H(n, t) {
-  const e = x(n), i = Math.min(e.width, e.height), o = Math.max(e.width, e.height), a = $(i), r = $(o);
+function W(n, t) {
+  const e = $(n), i = Math.min(e.width, e.height), o = Math.max(e.width, e.height), a = S(i), r = S(o);
   return t === "landscape" ? { width: Math.round(r), height: Math.round(a) } : { width: Math.round(a), height: Math.round(r) };
 }
-function U(n, t, e) {
-  const i = H(n, t);
+function q(n, t, e) {
+  const i = W(n, t);
   return e ? {
     width: i.width * e.x,
     height: i.height * e.y
   } : i;
 }
-async function W(n, t) {
-  const e = n.orientation === "landscape" ? "landscape" : "portrait", i = U(t, e, n.renderScale), o = document.createElement("div");
+async function J(n, t) {
+  const e = n.orientation === "landscape" ? "landscape" : "portrait", i = q(t, e, n.renderScale), o = document.createElement("div");
   o.setAttribute("aria-hidden", "true"), o.setAttribute("data-maplibre-gl-atlas-stage", ""), o.style.cssText = `position:fixed; top:0; left:0; opacity:0; pointer-events:none; width:${i.width}px; height:${i.height}px;`, document.body.appendChild(o);
   const a = {
     container: o,
@@ -142,30 +142,30 @@ async function W(n, t) {
     fadeDuration: 0
   };
   n.bounds ? (a.bounds = n.bounds, a.fitBoundsOptions = { padding: n.padding ?? 0, animate: !1 }) : (a.center = n.center, a.zoom = n.zoom);
-  const r = new M(a);
-  r.addControl(new R({ maxWidth: 100, unit: "metric" }), "bottom-left");
+  const r = new _(a);
+  r.addControl(new A({ maxWidth: 100, unit: "metric" }), "bottom-left");
   try {
     await new Promise((l, m) => {
-      r.on("error", (u) => m(u.error ?? u)), r.on("load", () => {
-        var u;
-        r.setProjection({ type: "mercator" }), n.terrain || r.setTerrain(null), Promise.resolve((u = n.decorate) == null ? void 0 : u.call(n, r)).then(() => {
+      r.on("error", (g) => m(g.error ?? g)), r.on("load", () => {
+        var g;
+        r.setProjection({ type: "mercator" }), n.terrain || r.setTerrain(null), Promise.resolve((g = n.decorate) == null ? void 0 : g.call(n, r)).then(() => {
           r.once("idle", () => l());
         }).catch(m);
       });
     });
-    const d = r.getCanvas().toDataURL("image/png"), c = r.getContainer().querySelector(".maplibregl-ctrl-scale");
-    if (c && n.renderScale) {
-      const l = Math.max(n.renderScale.x, n.renderScale.y), m = parseFloat(c.style.width);
-      Number.isNaN(m) || (c.style.width = `${m / l}px`);
+    const h = r.getCanvas().toDataURL("image/png"), s = r.getContainer().querySelector(".maplibregl-ctrl-scale");
+    if (s && n.renderScale) {
+      const l = Math.max(n.renderScale.x, n.renderScale.y), m = parseFloat(s.style.width);
+      Number.isNaN(m) || (s.style.width = `${m / l}px`);
     }
-    const h = c ? c.outerHTML : "";
-    return { dataUrl: d, scaleHtml: h, orientation: e };
+    const d = s ? s.outerHTML : "";
+    return { dataUrl: h, scaleHtml: d, orientation: e };
   } finally {
     r.remove(), o.remove();
   }
 }
-const f = "__maplibre-gl-atlas-review__", y = "__maplibre-gl-atlas-review-lines__", w = "__maplibre-gl-atlas-review-labels__", s = "maplibre-gl-atlas-review-panel";
-class G {
+const b = "__maplibre-gl-atlas-review__", x = "__maplibre-gl-atlas-review-fill__", E = "__maplibre-gl-atlas-review-lines__", c = "maplibre-gl-atlas-review-panel", y = "maplibre-gl-atlas-review-toggle";
+class K {
   constructor(t) {
     p(this, "options");
     p(this, "rows", []);
@@ -173,36 +173,68 @@ class G {
     p(this, "countEl");
     p(this, "confirmButton");
     p(this, "previouslyFocused");
+    p(this, "hasMap");
     p(this, "onKeyDown", (t) => {
       t.key === "Escape" && this.cancel();
     });
-    p(this, "disposed", !1);
-    this.options = t, this.previouslyFocused = document.activeElement, this.panel = document.createElement("div"), this.panel.className = s, this.panel.setAttribute("role", "dialog"), this.panel.setAttribute("aria-label", "Review atlas before printing"), this.panel.setAttribute("tabindex", "-1");
-    const e = document.createElement("div");
-    e.className = `${s}-header`;
-    const i = document.createElement("strong");
-    i.textContent = "Review atlas", this.countEl = document.createElement("span"), this.countEl.className = `${s}-count`, e.append(i, this.countEl);
-    const o = document.createElement("ul");
-    o.className = `${s}-list`, t.sheets.forEach((d, c) => {
-      const h = document.createElement("li"), l = document.createElement("label"), m = document.createElement("input");
-      m.type = "checkbox", m.checked = !0, m.addEventListener("change", () => this.handleToggle());
-      const u = document.createElement("span");
-      u.className = `${s}-label`, u.textContent = v(d, c);
-      const b = document.createElement("span");
-      b.className = `${s}-orientation`, b.textContent = q(d), l.append(m, u, b), h.appendChild(l), o.appendChild(h), this.rows.push({ sheet: d, checkbox: m });
+    p(this, "repositionToggles", () => {
+      const t = this.options.map;
+      if (!t) return;
+      const e = t.getContainer().getBoundingClientRect();
+      for (const i of this.rows) {
+        if (!i.toggleEl || !i.anchor) continue;
+        const o = t.project(i.anchor);
+        i.toggleEl.style.left = `${e.left + o.x}px`, i.toggleEl.style.top = `${e.top + o.y}px`;
+      }
     });
-    const a = document.createElement("div");
-    a.className = `${s}-actions`;
-    const r = document.createElement("button");
-    r.type = "button", r.className = `${s}-cancel`, r.textContent = "Cancel", r.addEventListener("click", () => this.cancel()), this.confirmButton = document.createElement("button"), this.confirmButton.type = "button", this.confirmButton.className = `${s}-confirm`, this.confirmButton.addEventListener("click", () => this.confirm()), a.append(r, this.confirmButton), this.panel.append(e, o, a), document.body.appendChild(this.panel), document.addEventListener("keydown", this.onKeyDown), this.addMapOverlay(), this.handleToggle(), this.panel.focus();
+    p(this, "disposed", !1);
+    var r, h;
+    this.options = t, this.hasMap = !!t.map, this.previouslyFocused = document.activeElement, t.sheets.forEach((s) => {
+      const d = L(s.bounds), l = d ? Z(d) : s.center;
+      this.rows.push({ sheet: s, included: !0, anchor: l });
+    }), this.panel = document.createElement("div"), this.panel.className = c, this.panel.setAttribute("role", "dialog"), this.panel.setAttribute("aria-label", "Review atlas before printing"), this.panel.setAttribute("tabindex", "-1");
+    const e = document.createElement("div");
+    e.className = `${c}-header`;
+    const i = document.createElement("strong");
+    i.textContent = "Review atlas", this.countEl = document.createElement("span"), this.countEl.className = `${c}-count`, e.append(i, this.countEl);
+    const o = document.createElement("div");
+    o.className = `${c}-actions`;
+    const a = document.createElement("button");
+    if (a.type = "button", a.className = `${c}-cancel`, a.textContent = "Cancel", a.addEventListener("click", () => this.cancel()), this.confirmButton = document.createElement("button"), this.confirmButton.type = "button", this.confirmButton.className = `${c}-confirm`, this.confirmButton.addEventListener("click", () => this.confirm()), o.append(a, this.confirmButton), this.hasMap)
+      this.panel.append(e, o), this.buildMapToggles(), this.addMapOverlay(), (r = this.options.map) == null || r.on("move", this.repositionToggles), (h = this.options.map) == null || h.on("resize", this.repositionToggles), this.repositionToggles();
+    else {
+      const s = document.createElement("ul");
+      s.className = `${c}-list`, this.rows.forEach((d, l) => {
+        const m = document.createElement("li"), g = document.createElement("label"), f = document.createElement("input");
+        f.type = "checkbox", f.checked = !0, f.addEventListener("change", () => {
+          d.included = f.checked, this.handleToggle();
+        });
+        const w = document.createElement("span");
+        w.className = `${c}-label`, w.textContent = X(d.sheet, l);
+        const v = document.createElement("span");
+        v.className = `${c}-orientation`, v.textContent = Y(d.sheet), g.append(f, w, v), m.appendChild(g), s.appendChild(m), d.checkbox = f;
+      }), this.panel.append(e, s, o);
+    }
+    document.body.appendChild(this.panel), document.addEventListener("keydown", this.onKeyDown), this.handleToggle(), this.panel.focus();
+  }
+  buildMapToggles() {
+    this.rows.forEach((t) => {
+      const e = document.createElement("button");
+      e.type = "button", e.className = y, this.paintToggle(e, t.included), e.addEventListener("click", () => {
+        t.included = !t.included, this.paintToggle(e, t.included), this.handleToggle();
+      }), document.body.appendChild(e), t.toggleEl = e;
+    });
+  }
+  paintToggle(t, e) {
+    t.textContent = e ? "×" : "+", t.title = e ? "Exclude this sheet from printing" : "Include this sheet in printing", t.setAttribute("aria-label", t.title), t.classList.toggle(`${y}-excluded`, !e);
   }
   handleToggle() {
-    const t = this.rows.filter((e) => e.checkbox.checked);
+    const t = this.rows.filter((e) => e.included);
     this.countEl.textContent = `${t.length} / ${this.rows.length} sheets selected`, this.confirmButton.textContent = `Print ${t.length} sheet${t.length === 1 ? "" : "s"}`, this.confirmButton.disabled = t.length === 0, this.updateMapOverlay();
   }
   confirm() {
     if (this.disposed) return;
-    const t = this.rows.filter((e) => e.checkbox.checked).map((e) => e.sheet);
+    const t = this.rows.filter((e) => e.included).map((e) => e.sheet);
     this.dispose(), this.options.onConfirm(t);
   }
   cancel() {
@@ -210,29 +242,22 @@ class G {
   }
   addMapOverlay() {
     const t = this.options.map;
-    t && (t.addSource(f, { type: "geojson", data: this.overlayGeoJson() }), t.addLayer({
-      id: y,
+    t && (t.addSource(b, { type: "geojson", data: this.overlayGeoJson() }), t.addLayer({
+      id: x,
+      type: "fill",
+      source: b,
+      paint: {
+        "fill-color": "#000",
+        "fill-opacity": ["case", ["get", "included"], 0, 0.35]
+      }
+    }), t.addLayer({
+      id: E,
       type: "line",
-      source: f,
+      source: b,
       paint: {
         "line-color": "#1a73e8",
         "line-width": ["case", ["get", "included"], 2.5, 1],
-        "line-opacity": ["case", ["get", "included"], 1, 0.3]
-      }
-    }), t.addLayer({
-      id: w,
-      type: "symbol",
-      source: f,
-      layout: {
-        "text-field": ["get", "label"],
-        "text-size": 14,
-        "symbol-placement": "point"
-      },
-      paint: {
-        "text-color": "#1a73e8",
-        "text-halo-color": "#fff",
-        "text-halo-width": 1.5,
-        "text-opacity": ["case", ["get", "included"], 1, 0.3]
+        "line-opacity": ["case", ["get", "included"], 1, 0.5]
       }
     }));
   }
@@ -240,44 +265,41 @@ class G {
     var i;
     const t = this.options.map;
     if (!t) return;
-    const e = t.getSource(f);
+    const e = t.getSource(b);
     (i = e == null ? void 0 : e.setData) == null || i.call(e, this.overlayGeoJson());
   }
   overlayGeoJson() {
     const t = [];
-    return this.rows.forEach(({ sheet: e, checkbox: i }, o) => {
-      const a = J(e.bounds);
-      if (!a) return;
-      const r = K(a);
-      t.push({
+    return this.rows.forEach((e) => {
+      const i = L(e.sheet.bounds);
+      i && t.push({
         type: "Feature",
-        properties: { included: i.checked, label: v(e, o) },
-        geometry: { type: "Polygon", coordinates: [a] }
-      }), t.push({
-        type: "Feature",
-        properties: { included: i.checked, label: v(e, o) },
-        geometry: { type: "Point", coordinates: r }
+        properties: { included: e.included },
+        geometry: { type: "Polygon", coordinates: [i] }
       });
     }), { type: "FeatureCollection", features: t };
   }
-  /** Removes the panel DOM, the map overlay (if any), and the Escape listener. Idempotent. */
+  /** Removes the panel DOM, on-map toggles/layers, and event listeners. Idempotent. */
   dispose() {
+    var e;
     if (this.disposed) return;
     this.disposed = !0, this.panel.remove(), document.removeEventListener("keydown", this.onKeyDown);
+    for (const i of this.rows)
+      (e = i.toggleEl) == null || e.remove();
     const t = this.options.map;
-    t && (t.getLayer(w) && t.removeLayer(w), t.getLayer(y) && t.removeLayer(y), t.getSource(f) && t.removeSource(f)), this.previouslyFocused instanceof HTMLElement && this.previouslyFocused.focus();
+    t && (t.off("move", this.repositionToggles), t.off("resize", this.repositionToggles), t.getLayer(E) && t.removeLayer(E), t.getLayer(x) && t.removeLayer(x), t.getSource(b) && t.removeSource(b)), this.previouslyFocused instanceof HTMLElement && this.previouslyFocused.focus();
   }
 }
-function q(n) {
+function Y(n) {
   return n.orientation === "landscape" ? "landscape" : "portrait";
 }
-function v(n, t) {
+function X(n, t) {
   const e = [n.headerLeft, n.headerRight].filter((i) => !!i);
   return e.length ? e.join(" — ") : n.role ? `${n.role} ${t + 1}` : `Sheet ${t + 1}`;
 }
-function J(n) {
+function L(n) {
   if (!n) return null;
-  const t = N.convert(n), e = t.getWest(), i = t.getSouth(), o = t.getEast(), a = t.getNorth();
+  const t = T.convert(n), e = t.getWest(), i = t.getSouth(), o = t.getEast(), a = t.getNorth();
   return [
     [e, a],
     [o, a],
@@ -286,35 +308,47 @@ function J(n) {
     [e, a]
   ];
 }
-function K(n) {
+function Z(n) {
   const t = n.map((i) => i[0]), e = n.map((i) => i[1]);
   return [(Math.min(...t) + Math.max(...t)) / 2, (Math.min(...e) + Math.max(...e)) / 2];
 }
-function Y() {
+function Q() {
   return `
-.${s} {
+.${c} {
   position: fixed; top: 10px; right: 10px; z-index: 10;
-  width: 260px; max-height: calc(100vh - 20px); overflow-y: auto;
+  width: 220px; max-height: calc(100vh - 20px); overflow-y: auto;
   background: #fff; color: #222; border-radius: 6px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.3);
   font: 13px/1.4 system-ui, sans-serif;
   padding: 10px;
 }
-.${s}-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-.${s}-count { color: #555; font-size: 12px; }
-.${s}-list { list-style: none; margin: 0 0 10px; padding: 0; }
-.${s}-list li { border-bottom: 1px solid #eee; }
-.${s}-list label { display: flex; align-items: center; gap: 6px; padding: 6px 2px; cursor: pointer; }
-.${s}-label { flex: 1; }
-.${s}-orientation { color: #888; font-size: 11px; }
-.${s}-actions { display: flex; justify-content: flex-end; gap: 8px; }
-.${s}-actions button { font: inherit; padding: 6px 12px; border-radius: 4px; border: 1px solid #ccc; background: #f5f5f5; cursor: pointer; }
-.${s}-confirm { background: #1a73e8; border-color: #1a73e8; color: #fff; }
-.${s}-confirm:disabled { background: #9ec1f2; border-color: #9ec1f2; cursor: not-allowed; }
+.${c}-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.${c}-count { color: #555; font-size: 12px; }
+.${c}-list { list-style: none; margin: 0 0 10px; padding: 0; }
+.${c}-list li { border-bottom: 1px solid #eee; }
+.${c}-list label { display: flex; align-items: center; gap: 6px; padding: 6px 2px; cursor: pointer; }
+.${c}-label { flex: 1; }
+.${c}-orientation { color: #888; font-size: 11px; }
+.${c}-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.${c}-actions button { font: inherit; padding: 6px 12px; border-radius: 4px; border: 1px solid #ccc; background: #f5f5f5; cursor: pointer; }
+.${c}-confirm { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+.${c}-confirm:disabled { background: #9ec1f2; border-color: #9ec1f2; cursor: not-allowed; }
+
+/* On-map toggle button — a circle with ×/+, anchored over each sheet's
+   center (dwg7/zukaku's Save Paper cell-toggle, ADR 0008). Positioned via
+   left/top set in JS (repositionToggles), tracking the map's own pan/zoom. */
+.${y} {
+  position: fixed; transform: translate(-50%, -50%);
+  z-index: 11; width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid rgba(0,0,0,0.5); background: rgba(255,255,255,0.92);
+  font: bold 15px/24px system-ui, sans-serif; text-align: center; color: #333;
+  cursor: pointer; padding: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.${y}-excluded { background: rgba(255,255,255,0.6); color: #666; }
 `;
 }
-const C = "maplibre-gl-atlas-print-root";
-class tt {
+const M = "maplibre-gl-atlas-print-root";
+class it {
   constructor(t) {
     p(this, "options");
     p(this, "map");
@@ -330,7 +364,7 @@ class tt {
       throw new Error("AtlasControl requires `options.sheets: () => AtlasSheet[] | Promise<AtlasSheet[]>`.");
     this.options = {
       ...t,
-      pageSize: x(t.pageSize),
+      pageSize: $(t.pageSize),
       margin: t.margin ?? 15,
       strategy: t.strategy ?? "auto",
       showButton: t.showButton ?? !0,
@@ -343,7 +377,7 @@ class tt {
   // sheet-bounds outlines onto it, so (unlike before the review feature)
   // the control now needs to hold onto it.
   onAdd(t) {
-    this.map = t, this.options.injectStyles && this.injectStyles(E(this.options.strategy));
+    this.map = t, this.options.injectStyles && this.injectStyles(C(this.options.strategy));
     const e = document.createElement("div");
     if (this.options.showButton) {
       e.className = "maplibregl-ctrl maplibregl-ctrl-group maplibre-gl-atlas-ctrl";
@@ -372,7 +406,7 @@ class tt {
     (e = this.activeReview) == null || e.dispose();
     const t = await this.options.sheets();
     await new Promise((i, o) => {
-      this.activeReview = new G({
+      this.activeReview = new K({
         map: this.map,
         sheets: t,
         onConfirm: (a) => {
@@ -414,14 +448,14 @@ class tt {
   async buildPrintDom(t) {
     var e, i;
     try {
-      await ((i = (e = this.options).onBeforePrint) == null ? void 0 : i.call(e)), X(t);
-      const o = E(this.options.strategy), a = t.map(S), r = O(a);
+      await ((i = (e = this.options).onBeforePrint) == null ? void 0 : i.call(e)), V(t);
+      const o = C(this.options.strategy), a = t.map(R), r = F(a);
       this.options.injectStyles && this.injectStyles(o);
-      const d = this.getOrCreatePrintRoot();
-      d.innerHTML = "", d.className = o === "rotate" ? `strategy-rotate base-${r}` : "strategy-mixed";
-      for (const c of t) {
-        const h = S(c), { dataUrl: l, scaleHtml: m } = await W(c, this.options.pageSize), u = o === "rotate" && h !== r;
-        d.appendChild(Z(c, h, u, l, m));
+      const h = this.getOrCreatePrintRoot();
+      h.innerHTML = "", h.className = o === "rotate" ? `strategy-rotate base-${r}` : "strategy-mixed";
+      for (const s of t) {
+        const d = R(s), { dataUrl: l, scaleHtml: m } = await J(s, this.options.pageSize), g = o === "rotate" && d !== r;
+        h.appendChild(tt(s, d, g, l, m));
       }
     } catch (o) {
       throw this.handleError(o), o;
@@ -433,10 +467,10 @@ class tt {
   }
   injectStyles(t) {
     const e = [
-      k(),
-      j(this.options.pageSize, t),
-      B(this.options.margin),
-      Y()
+      B(),
+      H(this.options.pageSize, t),
+      D(this.options.margin),
+      Q()
     ].join(`
 `);
     this.styleEl || (this.styleEl = document.createElement("style"), document.head.appendChild(this.styleEl)), this.styleEl.textContent = e;
@@ -444,50 +478,50 @@ class tt {
   getOrCreatePrintRoot() {
     var e;
     if ((e = this.printRoot) != null && e.isConnected) return this.printRoot;
-    let t = document.getElementById(C);
-    return t || (t = document.createElement("div"), t.id = C, t.setAttribute("aria-hidden", "true"), document.body.appendChild(t)), this.printRoot = t, t;
+    let t = document.getElementById(M);
+    return t || (t = document.createElement("div"), t.id = M, t.setAttribute("aria-hidden", "true"), document.body.appendChild(t)), this.printRoot = t, t;
   }
   handleError(t) {
     this.options.onError ? this.options.onError(t) : console.error("[maplibre-gl-atlas]", t);
   }
 }
-function S(n) {
+function R(n) {
   return n.orientation === "landscape" ? "landscape" : "portrait";
 }
-function X(n) {
+function V(n) {
   if (n.length <= 1) return;
   n.some((e) => !!e.pitch) && console.warn(
     "[maplibre-gl-atlas] One or more sheets have a non-zero `pitch`. Pitch introduces perspective distortion — the map scale varies across the sheet, and physical edges won't line up with neighboring sheets. Reserve `pitch` for a standalone sheet (e.g. a cover page) that isn't meant to be tiled edge-to-edge with the others."
   );
 }
-function Z(n, t, e, i, o) {
+function tt(n, t, e, i, o) {
   const a = document.createElement("section");
   a.className = `print-page ${t}-page${n.className ? ` ${n.className}` : ""}`;
   const r = document.createElement("div");
   r.className = `print-page-inner ${t}-page${e ? " rotated" : ""}`;
-  const d = document.createElement("div");
-  if (d.className = "print-header", n.headerLeft) {
+  const h = document.createElement("div");
+  if (h.className = "print-header", n.headerLeft) {
     const l = document.createElement("div");
-    l.className = "print-brand", l.textContent = n.headerLeft, d.appendChild(l);
+    l.className = "print-brand", l.textContent = n.headerLeft, h.appendChild(l);
   }
   if (n.headerRight) {
     const l = document.createElement("div");
-    l.className = "print-ref", l.textContent = n.headerRight, d.appendChild(l);
+    l.className = "print-ref", l.textContent = n.headerRight, h.appendChild(l);
   }
-  r.appendChild(d);
-  const c = document.createElement("div");
-  c.className = "print-map";
-  const h = document.createElement("img");
-  if (h.src = i, h.alt = "", c.appendChild(h), r.appendChild(c), n.footer !== !1) {
+  r.appendChild(h);
+  const s = document.createElement("div");
+  s.className = "print-map";
+  const d = document.createElement("img");
+  if (d.src = i, d.alt = "", s.appendChild(d), r.appendChild(s), n.footer !== !1) {
     const l = document.createElement("div");
     l.className = "print-footer", l.innerHTML = o, r.appendChild(l);
   }
   return a.appendChild(r), a;
 }
 export {
-  tt as AtlasControl,
-  G as ReviewPanel,
-  D as choosePrintStrategy,
-  z as isLikelyWindows
+  it as AtlasControl,
+  K as ReviewPanel,
+  j as choosePrintStrategy,
+  O as isLikelyWindows
 };
 //# sourceMappingURL=maplibre-gl-atlas.js.map
