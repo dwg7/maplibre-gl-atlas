@@ -14,8 +14,9 @@ MapLibre GL JSコントロールとして切り出した。この移行計画3PR
 `renderScale`補正漏れ——後者はzukaku本体にも現存)を発見・修正し、
 `review()`(印刷前の確認ステップ)の追加→zukaku Save Paper相当の
 on-map ×/+トグルへの作り直し→索引ページの向き自動選択の廃止、と
-UI/UXを複数回りイテレーションした。最新の状態・次の作業方針は
-下の「2026-09-10」節と「次にやること」参照。
+UI/UXを複数回りイテレーションした。2026-09-10、zukaku統合の前段として
+Atlasモードのプログラム的な有効化(デモのみ)を完了した。最新の状態・
+次の作業方針は下の「2026-09-10」節と「次にやること」参照。
 
 - スコープ・設計原則は[CLAUDE.md](CLAUDE.md)参照。
 - API設計・命名の経緯は[DECISIONS.md](DECISIONS.md)・[adr/0001](adr/0001-window-print-not-jspdf.md)・
@@ -260,39 +261,51 @@ D9実装直後、「×と+はPrintボタンを押す前から出ていい。索�
 - 実機検証: 1行×3列・portraitで、生成された4シートすべてが
   `portrait-page`になることを確認(修正前はIndexだけ`landscape-page`)。
 
+## 2026-09-10: Atlasモードのプログラム的な有効化(デモのみ)
+
+zukaku統合の前段として、デモの`setAtlasMode(on)`がトグルボタンの
+クリックからしか呼べない状態を解消した。詳細は
+[adr/0002の追記(2026-09-10)](adr/0002-print-review-step.md)参照。
+
+- `setAtlasMode`自体の実装は変更していない(元々`AtlasModeToggle`から
+  独立した関数だった)。`window.exampleAtlasMode = { set, isActive }`を
+  追加し、「ボタン専用ではなく状態①への遷移そのもの」であることを明示。
+- zukaku本体には既に独自の範囲指定入口(Field Papers由来)があるため、
+  移植時はこのデモの`AtlasModeToggle`ボタンをそのまま持ち込むのではなく、
+  zukaku既存のトリガーから`setAtlasMode`相当の関数を直接呼ぶ想定。
+- ライブラリ本体(`src/`)は無変更。
+
+**実機検証**: Claude Browserプレビューで`window.exampleAtlasMode.set(true/false)`
+がグリッド/パネルの表示とトグルボタンの`aria-pressed`を正しく連動させる
+ことを確認。続けてボタンを実際にクリックし、`isActive()`がその変化を
+正しく反映すること(ボタンとAPIが同じ`state`を共有し双方向に同期する
+こと)も確認した。
+
 ## 次にやること
 
-**方針(2026-09-10、hfuさん指示)**: 次の作業は、①「Atlasモードを
-JS側からenableできるようにする」→②「zukaku本体の実装にこのライブラリを
-使う」という順で進める。デモの`AtlasModeToggle`は現状、トグルボタンの
-クリックからしか`setAtlasMode(on)`を呼べない(状態⓪⇄①の切り替えが
-ユーザーのクリックだけに紐づいている)。zukaku側は独自のUI・状態管理
-(URL hash復元、Save Paper、タイトル入力等)を持つため、ボタンクリック
-以外の経路(プログラム的な初期化・状態復元等)からもAtlasモードに
-入れる必要がある。①をまず一般化してから、②(zukaku側PR 2/3)に進むこと。
+**方針(2026-09-10、hfuさん指示)**: ①「Atlasモードを JS側からenableできる
+ようにする」→②「zukaku本体の実装にこのライブラリを使う」という順で
+進める。①は上の「2026-09-10」節で完了。次は②(zukaku側PR 2/3)に進む。
 
-1. **Atlasモードのプログラム的な有効化**(新規、②の前提)。デモの
-   `setAtlasMode(on)`/`AtlasModeToggle`パターンを、クリック起点に限定
-   しない形へ一般化する(例: 呼び出し側から直接呼べる関数・コールバック
-   として整理するか、`AtlasControl`自体に組み込むかは要検討)。zukaku側が
-   自分のUI・状態管理からAtlasモードの開始/終了を制御できることがゴール。
-2. **実ブラウザでの手動検証**(macOS Chromium系・Windows Edge/Chrome、
-   計画§6の最低ライン)。`examples/basic/index.html`および
-   [docs/index.html](docs/index.html)のライブデモを使う。Claude Browserの
-   プレビューペインでのクリックスルー検証は完了(setProjection修正・
-   スケールバー修正・`review()`関連・on-map ×/+トグル・索引ページの向き
-   修正、一通りの動作を確認済み)が、macOS/Windowsの実機・実ブラウザでの
-   確認はまだ行っていない。
-3. **zukaku側PR 2**: `docs/index.html`(対話的印刷パス)をこのライブラリの
+1. **zukaku側PR 2**: `docs/index.html`(対話的印刷パス)をこのライブラリの
    消費に切り替える。`computePages()`はそのまま残し、
    `sheets: () => [...]`に変換、索引シートに`role:"index"`・
    `decorate: (map) => addOverviewGridLayers(map, spec.grid, labelScale)`を
    渡す。デモで確立したSave Paper相当のon-map ×/+トグル・状態遷移
-   (⓪/①/②)のパターンをzukaku自身のUIに合わせて移植する。
-4. **zukaku側PR 3**: `scripts/render/page.html`(Playwright経路)の移行。
+   (⓪/①/②)のパターンをzukaku自身のUIに合わせて移植する。zukaku既存の
+   範囲指定入口から`setAtlasMode`相当の関数を直接呼ぶ形にし、デモの
+   `AtlasModeToggle`(専用トグルボタン)は持ち込まない。
+2. **zukaku側PR 3**: `scripts/render/page.html`(Playwright経路)の移行。
    `AtlasControl.prepare()`を使う(`print()`ではなく——`window.print()`は
    呼ばれず、Playwright側の`page.pdf()`が実際のトリガーになるため)。
-5. `NPM_TOKEN`を設定し、`v0.1.0`タグを打って初回npm公開(人間の作業、
+3. **実ブラウザでの手動検証**(macOS Chromium系・Windows Edge/Chrome、
+   計画§6の最低ライン)。`examples/basic/index.html`および
+   [docs/index.html](docs/index.html)のライブデモを使う。Claude Browserの
+   プレビューペインでのクリックスルー検証は完了(setProjection修正・
+   スケールバー修正・`review()`関連・on-map ×/+トグル・索引ページの向き
+   修正・Atlasモードのプログラム的有効化、一通りの動作を確認済み)が、
+   macOS/Windowsの実機・実ブラウザでの確認はまだ行っていない。
+4. `NPM_TOKEN`を設定し、`v0.1.0`タグを打って初回npm公開(人間の作業、
    CLAUDE.md 5節)。
 
 ## 未検討のまま進めた判断(実装時のデフォルト選択)

@@ -434,6 +434,21 @@
   const atlasToggle = new AtlasModeToggle();
   map.addControl(atlasToggle, "top-right");
 
+  // --- Programmatic atlas-mode entry point ---
+  // AtlasModeToggle's button above is just one caller of setAtlasMode() —
+  // a host page that already has its own "start building an atlas" trigger
+  // (e.g. dwg7/zukaku's existing range-selection entry point) should call
+  // setAtlasMode() directly from its own code instead of also rendering
+  // AtlasModeToggle. This page has no module export surface of its own (it's
+  // a plain <script type="module"> in an HTML file, not a library), so the
+  // seam is exposed on `window` purely for this demo to be drivable from the
+  // console or another script on the same page — ported into a real app,
+  // setAtlasMode() would just be called directly.
+  window.exampleAtlasMode = {
+    set: setAtlasMode,
+    isActive: () => state.atlasMode,
+  };
+
   document.getElementById("print-btn").addEventListener("click", () => {
     atlasControl.print().catch((err) => console.error("Atlas print failed:", err));
   });

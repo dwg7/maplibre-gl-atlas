@@ -153,3 +153,15 @@ Printボタンを`review()`経由から`print()`直接呼び出しに変更し�
 (`examples/basic/`・`docs/`)の`computeSheets()`のみの変更、ライブラリ本体
 (`src/`)は無関係。
 → [adr/0002の追記(2026-09-09、4件目)](adr/0002-print-review-step.md)
+
+## D12: デモの`setAtlasMode`を任意の呼び出し元から呼べることを明示(zukaku統合の準備、デモのみ)
+
+zukaku統合の前段として、「Atlasモードのボタンクリック以外からの
+プログラム的な有効化」を先に済ませておく、というhfuさんの指示。
+デモの`setAtlasMode(on)`は元々`AtlasModeToggle`ボタンから独立した
+関数だったが、それが「ボタン専用」ではなく「状態①への遷移そのもの」
+であることを明文化するため、`window.exampleAtlasMode = { set, isActive }`
+を追加した。ライブラリ本体(`src/`)は無変更——`AtlasControl`は
+元々`showButton:false`という形で「入口をどう用意するかは呼び出し側の
+領域」を許容しており、今回の変更はその領域内での明示に留まる。
+→ [adr/0002の追記(2026-09-10)](adr/0002-print-review-step.md)

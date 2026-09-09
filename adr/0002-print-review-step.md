@@ -229,3 +229,42 @@ UI上は単一の`orientation`トグルボタンしか無く、「索引ペー�
 **実機検証**: 1行×3列・portraitで印刷し、生成された4シート
 (Index/A1/A2/A3)すべてが`portrait-page`クラスを持つことを確認した
 (修正前はIndexだけ`landscape-page`になっていた)。
+
+## 追記(2026-09-10): Atlasモードのプログラム的な有効化(デモのみ)
+
+zukaku本体への統合(次の作業)を見据えた準備として、hfuさんから
+「Atlasモードを JS側からenableできるようにした上で、zukakuの実装に
+maplibre-gl-atlasを使うことにする」という順序の指示を受けた。
+
+デモ(`examples/basic/`・`docs/`)の`setAtlasMode(on)`はこれまで
+`AtlasModeToggle`ボタンのクリックハンドラからしか呼ばれていなかった。
+zukaku自身は独自の「範囲指定」入口(Field Papers由来のUI)を既に持って
+おり、このデモの`AtlasModeToggle`をそのまま持ち込むのではなく、zukaku
+自身の既存トリガーから状態①への遷移を呼び出すことになる。つまり
+`setAtlasMode`は「ボタン専用の内部関数」ではなく、「任意の呼び出し元から
+呼べる、状態①への遷移そのもの」として扱えるようにしておく必要がある。
+
+**変更内容**: `setAtlasMode`自体の実装は変更していない(元々`state`の
+更新とグリッド/パネルの表示切り替えだけを行う、ボタンから独立した
+関数だった)。`AtlasModeToggle`がその一呼び出し元に過ぎないことを明文化
+する目的で、`window.exampleAtlasMode = { set: setAtlasMode, isActive: () =>
+state.atlasMode }`を追加し、コンソールや同一ページ上の別スクリプトから
+状態①への出入りを駆動できることを示した。`window`に載せているのは、
+この2ファイルが`<script type="module">`の生スクリプトでしかなく
+export先が無いため——zukaku本体に移植する際は、`setAtlasMode`をzukaku
+既存のトリガー(その入口が何であれ)から直接呼ぶだけでよく、`window`
+経由にする必要はない。
+
+ライブラリ本体(`src/`)への変更は無い——`AtlasControl`は元々
+`showButton:false`+呼び出し側の任意のUI、という構成を許しており、
+「状態①への入口をどう用意するか」はそもそも呼び出し側の領域だった。
+今回の変更は、その領域内で「ボタン以外からも呼べる」ことをデモ上で
+明示しただけである。
+
+**実機検証**: Claude Browserプレビューで`window.exampleAtlasMode.set(true)`
+実行後、グリッド/パネルの`visible`クラスとトグルボタンの
+`aria-pressed`が正しく連動することを確認した。続けて`set(false)`で
+元に戻ることも確認。さらにトグルボタンを実際にクリックし、
+`window.exampleAtlasMode.isActive()`がクリック後の状態を正しく
+反映することも確認した(ボタンとAPIが同じ`state`を共有しているため、
+双方向に同期する)。
