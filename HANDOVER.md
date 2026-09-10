@@ -6,21 +6,23 @@
 
 [dwg7/zukaku#8](https://github.com/dwg7/zukaku/issues/8)への対応として、
 zukakuの「Print in Browser」機能(zukaku ADR 0007/0009)から、汎用的な
-MapLibre GL JSコントロールとして切り出した。この移行計画3PR中、**PR 1
-(本リポジトリの構築)・PR 2(zukaku側`docs/index.html`の消費側切り替え、
-[zukaku ADR 0012](https://github.com/dwg7/zukaku/blob/main/adr/0012-consume-maplibre-gl-atlas-library.md))
-は完了・実機検証済み**。PR 3(zukaku側`scripts/render/`のPlaywright経路)は
-設計を提案([zukaku ADR 0013](https://github.com/dwg7/zukaku/blob/main/adr/0013-playwright-pipeline-atlascontrol-migration.md)、
-未承認)した段階で実装は保留中——本番のGitHub Actionsパイプラインに
-対する根本的な設計変更のため、実装より先にhfuさんの承認を得る方針。
+MapLibre GL JSコントロールとして切り出した。この移行計画3PRは
+**すべて完了・実機検証済み**——PR 1(本リポジトリの構築)、PR 2
+(zukaku側`docs/index.html`の消費側切り替え、
+[zukaku ADR 0012](https://github.com/dwg7/zukaku/blob/main/adr/0012-consume-maplibre-gl-atlas-library.md))、
+PR 3(zukaku側`scripts/render/`のPlaywright経路、
+[zukaku ADR 0013](https://github.com/dwg7/zukaku/blob/main/adr/0013-playwright-pipeline-atlascontrol-migration.md))。
+PR 3の実機検証中に本ライブラリ自身の実バグ(landscapeシートが最後に来ると
+空白ページが増える、`src/strategy.ts`のCSS丸め込み)を発見・修正した
+——詳細は下の該当節参照。
 2026-09-08〜09、デモを実際にクリックスルー検証する過程で実バグ2件
 (`setProjection()`のタイミング、スケールバーの`renderScale`補正漏れ
 ——後者はzukaku本体にも現存)を発見・修正し、`review()`(印刷前の確認
 ステップ)の追加→zukaku Save Paper相当のon-map ×/+トグルへの作り直し
 →索引ページの向き自動選択の廃止、とUI/UXを複数回りイテレーションした。
 2026-09-10、zukaku統合の前段としてAtlasモードのプログラム的な有効化
-(デモのみ)を完了し、続けてzukaku側PR 2を実施した。最新の状態・
-次の作業方針は下の「2026-09-10」節と「次にやること」参照。
+(デモのみ)を完了し、続けてzukaku側PR 2・PR 3を実施した。最新の状態・
+残タスクは下の「2026-09-10」節と「次にやること」参照。
 
 - スコープ・設計原則は[CLAUDE.md](CLAUDE.md)参照。
 - API設計・命名の経緯は[DECISIONS.md](DECISIONS.md)・[adr/0001](adr/0001-window-print-not-jspdf.md)・
@@ -285,40 +287,72 @@ zukaku統合の前段として、デモの`setAtlasMode(on)`がトグルボタ�
 正しく反映すること(ボタンとAPIが同じ`state`を共有し双方向に同期する
 こと)も確認した。
 
+## 2026-09-10: zukaku側PR 2・PR 3の実施、実バグ1件発見・修正(`src/strategy.ts`)
+
+hfuさんの承認(「ADR 0013の設計で進めていいよ」)を得て、zukaku側の
+残り2PRを実施した。
+
+- **zukaku側PR 2**: `docs/index.html`(対話的印刷パス)をこのライブラリの
+  消費に切り替えた——[zukaku ADR 0012](https://github.com/dwg7/zukaku/blob/main/adr/0012-consume-maplibre-gl-atlas-library.md)
+  参照。`computePages()`(Share/JSON/Actions向け)は無変更のまま、新規
+  `computeSheets()`アダプタを追加する形。zukaku自身の`renderGrid()`の
+  ×/+トグルは元々`docs/index.html`に実装済みだった(このライブラリの
+  デモが後からそれを模倣した経緯)ため、`AtlasModeToggle`のような専用の
+  状態遷移トグルは移植していない——zukakuには元々「アトラスモードの
+  外」という状態が無く、範囲指定UIは常時グリッド編集画面だったため。
+  副次的に、概要ページの向きを常に統一する変更(D11と同じ)をzukaku側にも
+  適用し、[zukaku D15](https://github.com/dwg7/zukaku/blob/main/DECISIONS.md)
+  (Windows専用の回避策)を実質的に不要にした。
+- **zukaku側PR 3**: `scripts/render/`(Playwright/GitHub Actions経路)の
+  移行。実際の`scripts/render/lib.js`/`atlas.js`は「1ページ=1つの独立した
+  Playwright `BrowserContext`+個別`page.pdf()`を`pdf-lib`で結合」という
+  設計で、`prepare()`が前提とする「1ページに全シートを構築し`page.pdf()`を
+  1回だけ呼ぶ」モデルとは根本的に異なっていたため、単純な置き換えではなく
+  `atlas.js`/`lib.js`/`page.html`の実質的な書き直しになった。設計・検討
+  事項は[zukaku ADR 0013](https://github.com/dwg7/zukaku/blob/main/adr/0013-playwright-pipeline-atlascontrol-migration.md)参照。
+
+**このライブラリ自身の実バグを2件発見・修正**(PR 3の実機検証中):
+
+1. Playwrightの`page.pdf()`は`preferCSSPageSize: true`を明示しない限り
+   `@page`を無視してLetter判にフォールバックする(ライブラリ本体の
+   バグではなく、消費側`renderAtlas()`の呼び出し方の問題——zukaku側で対応)。
+2. **`src/strategy.ts`のバグ**: 印刷対象の最後のシートがlandscapeだと、
+   内容の無い2ページ目が余分に生成される。Chromiumのprint-to-PDF固有の
+   丸め込みで、`page:`が割り当てられた要素の高さがその物理ページの
+   宣言高さと厳密に一致すると内容がわずかに次ページへ漏れる(portraitでは
+   再現しない、landscape固有)。`generateStrategyCss()`でlandscapeページの
+   高さを`calc(<w>mm - 1mm)`に変更して解消(`tests/strategy.test.ts`に
+   回帰テスト追加)。単一シートに限らない一般的な不具合で、
+   `docs/index.html`側(D11の変更)にも当てはまっていた——D11の実機検証が
+   portraitでしか行われておらず見逃されていた。詳細は
+   [adr/0001の追記(2026-09-10)](adr/0001-window-print-not-jspdf.md)・
+   [DECISIONS.md D13](DECISIONS.md)参照。
+
+**実機検証**: zukaku側でPlaywrightを直接実行し、3ページ混在アトラス・
+5ページ本番リクエストJSON(2×2グリッド+概要、renderScale・ラベル付き)・
+単一landscapeシート・2ページとも同じlandscapeのアトラスの4パターンを
+pypdf/PyMuPDFでページ数・向き・寸法・画像内容を検証。`docs/index.html`の
+Print in Browserも同様にPlaywright越しに検証した(実ブラウザでの確認は
+未実施)。
+
 ## 次にやること
 
 **方針(2026-09-10、hfuさん指示)**: ①「Atlasモードを JS側からenableできる
 ようにする」→②「zukaku本体の実装にこのライブラリを使う」という順で
-進める。①は上の「2026-09-10」節で完了。②のうちzukaku側PR 2は完了、
-PR 3は設計を提案しhfuさんの承認待ち(下記)。
+進めた。①・②(zukaku側PR 2・PR 3)とも完了。残るのは検証・公開作業のみ:
 
-1. **zukaku側PR 2(完了、2026-09-10)**: `docs/index.html`(対話的印刷パス)を
-   このライブラリの消費に切り替えた——[zukaku ADR 0012](https://github.com/dwg7/zukaku/blob/main/adr/0012-consume-maplibre-gl-atlas-library.md)
-   参照。`computePages()`(Share/JSON/Actions向け)は無変更のまま、新規
-   `computeSheets()`アダプタを追加する形。zukaku自身の`renderGrid()`の
-   ×/+トグルは元々`docs/index.html`に実装済みだった(このライブラリの
-   デモが後からそれを模倣した経緯)ため、`AtlasModeToggle`のような専用の
-   状態遷移トグルは移植していない——zukakuには元々「アトラスモードの
-   外」という状態が無く、範囲指定UIは常時グリッド編集画面だったため。
-   副次的に、概要ページの向きを常に統一する変更(D11と同じ)をzukaku側にも
-   適用し、[zukaku D15](https://github.com/dwg7/zukaku/blob/main/DECISIONS.md)
-   (Windows専用の回避策)を実質的に不要にした。
-2. **zukaku側PR 3(提案中、未承認)**: `scripts/render/`(Playwright/GitHub
-   Actions経路)の移行。当初「`AtlasControl.prepare()`を使う」という粒度
-   でしか想定していなかったが、実際の`scripts/render/lib.js`/`atlas.js`は
-   「1ページ=1つの独立したPlaywright `BrowserContext`+個別`page.pdf()`を
-   `pdf-lib`で結合」という設計で、`prepare()`が前提とする「1ページに全
-   シートを構築し`page.pdf()`を1回だけ呼ぶ」モデルとは根本的に異なる
-   ——単純な置き換えでは済まない。本番のGitHub Actionsパイプラインである
-   ため、設計案・検討事項・検証計画を[zukaku ADR 0013](https://github.com/dwg7/zukaku/blob/main/adr/0013-playwright-pipeline-atlascontrol-migration.md)
-   にまとめ、実装はhfuさんの承認待ちで止めてある。
-3. **実ブラウザでの手動検証**(macOS Chromium系・Windows Edge/Chrome、
+1. **実ブラウザでの手動検証**(macOS Chromium系・Windows Edge/Chrome、
    計画§6の最低ライン)。`examples/basic/index.html`・
    [docs/index.html](docs/index.html)・zukaku本体の
    [docs/index.html](https://dwg7.github.io/zukaku/)のいずれも、Claude
-   Browserのプレビューペインでのクリックスルー検証は完了しているが、
-   macOS/Windowsの実機・実ブラウザでの確認はまだ行っていない。
-4. `NPM_TOKEN`を設定し、`v0.1.0`タグを打って初回npm公開(人間の作業、
+   BrowserプレビューまたはPlaywright直接実行でのクリックスルー検証は
+   完了しているが、macOS/Windowsの実機・実ブラウザでの確認(印刷
+   ダイアログを開いて実際に保存するところまで)はまだ行っていない。
+2. zukaku側の`scripts/render/`が実際にGitHub Actions上で(テスト用の
+   リクエストJSONをpush/PRして)試験実行され、既存の
+   `docs/responses/*.pdf`と同等の結果になることの最終確認(ローカルでの
+   Playwright実行検証は完了済み)。
+3. `NPM_TOKEN`を設定し、`v0.1.0`タグを打って初回npm公開(人間の作業、
    CLAUDE.md 5節)。公開後はzukaku側の`docs/vendor/`をunpkg importに
    切り替えて削除する。
 

@@ -100,3 +100,34 @@ Chromium系ブラウザ専用と見なすべき**:
 - [`@watergis/maplibre-gl-export`](https://www.npmjs.com/package/@watergis/maplibre-gl-export)
 - [`opengeos/maplibre-gl-components`](https://github.com/opengeos/maplibre-gl-components)
 - [`opengeos/maplibre-gl-plugin-template`](https://github.com/opengeos/maplibre-gl-plugin-template) — このリポジトリの土台にした雛形
+
+## 追記(2026-09-10): landscapeシートが最後に来ると空白ページが増える実バグを修正
+
+dwg7/zukaku側の[ADR 0013](https://github.com/dwg7/zukaku/blob/main/adr/0013-playwright-pipeline-atlascontrol-migration.md)
+(`scripts/render/`をこのライブラリの`AtlasControl.prepare()`に移行する作業)の
+実機検証中に発見。**印刷対象の最後のシートがlandscapeの場合、内容の無い
+2ページ目が余分に生成される**——単一シートのアトラスに限らず、複数シートで
+最後がlandscapeであれば常に起こりうる一般的な不具合だった。
+
+**原因**: Chromiumのprint-to-PDF固有の丸め込み。CSSの`page:`プロパティで
+名前付き`@page`が割り当てられた要素の高さが、その物理ページの宣言高さと
+**厳密に一致**すると、ごくわずかに内容が次ページへ漏れる。二分探索で
+確認したところ、0.1mm不足させても再現し、1mm不足させると解消した。
+同じ形の`@page`宣言でも**portraitでは再現しない**——landscape方向の
+`@page`ジオメトリに固有の挙動(Playwrightの`page.pdf()`・`preferCSSPageSize:
+true`経由で確認したが、`window.print()`の実ブラウザ印刷パイプラインも
+同じChromiumの内部コードを通るため、理論上は同じ条件で起こりうる——
+dwg7/zukaku側の実機検証がこれまでportraitでしか行われておらず、
+見逃されていた可能性が高い)。
+
+**修正**: `src/strategy.ts`の`generateStrategyCss()`で、landscapeページの
+高さを額面通りの値ではなく`calc(<portrait幅>mm - 1mm)`にした
+(`strategy-mixed`・`strategy-rotate`の両方)。デフォルト15mmマージンに
+対して視覚的に無視できる差。`tests/strategy.test.ts`に回帰テストを追加。
+
+**実機検証**: dwg7/zukakuの`scripts/render/`(Playwright)・`docs/index.html`
+(Print in Browser、Playwright越しに`window.print`をスタブしつつ同一ページで
+直接`page.pdf({preferCSSPageSize:true})`を呼ぶ手法)の両方で、単一
+landscapeシート・2シートとも同じlandscapeのアトラスを修正前後で比較し、
+修正後は正しいページ数になることを確認した。詳細はdwg7/zukakuの
+[ADR 0013追記](https://github.com/dwg7/zukaku/blob/main/adr/0013-playwright-pipeline-atlascontrol-migration.md#追記2026-09-10-実装完了実バグ2件を発見修正)参照。

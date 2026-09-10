@@ -87,11 +87,12 @@ MapLibre GL JS用の`map.addControl()`スタイルのコントロール。ブラ
 - [dwg7/zukaku](https://github.com/dwg7/zukaku) — このライブラリの切り出し元。
   zukaku自身がこのライブラリを消費する移行はzukaku側の別PR(3PR計画、
   [zukaku#8](https://github.com/dwg7/zukaku/issues/8))であり、このリポジトリの
-  スコープではない。`docs/index.html`(対話的印刷パス)の移行は
-  [zukaku ADR 0012](https://github.com/dwg7/zukaku/blob/main/adr/0012-consume-maplibre-gl-atlas-library.md)で
-  完了済み。`scripts/render/`(Playwright/GitHub Actions経路)の移行は
-  [zukaku ADR 0013](https://github.com/dwg7/zukaku/blob/main/adr/0013-playwright-pipeline-atlascontrol-migration.md)で
-  提案中(未承認)。
+  スコープではない——**3PRとも完了済み**。`docs/index.html`(対話的印刷
+  パス)は[zukaku ADR 0012](https://github.com/dwg7/zukaku/blob/main/adr/0012-consume-maplibre-gl-atlas-library.md)、
+  `scripts/render/`(Playwright/GitHub Actions経路)は
+  [zukaku ADR 0013](https://github.com/dwg7/zukaku/blob/main/adr/0013-playwright-pipeline-atlascontrol-migration.md)。
+  PR 3の実機検証中に本ライブラリ自身の実バグ([adr/0001の追記](adr/0001-window-print-not-jspdf.md)、
+  landscapeシートが最後に来ると空白ページが増える)を発見・修正した。
 - [dwg7/cafebabe](https://github.com/dwg7/cafebabe) — 「WebGLキャンバスは
   印刷パイプラインに直接含められない」等、複数プロジェクトに横断する一般則
   はcafebabe側に残す。このリポジトリのADRには「その一般則をどう実装で
@@ -107,6 +108,6 @@ MapLibre GL JS用の`map.addControl()`スタイルのコントロール。ブラ
 ## 6. 現在のステータス
 
 詳細は[HANDOVER.md](HANDOVER.md)参照。v1完成・実機デバッグ済み、npm未公開
-(ビルド成果物をzukaku側に手動vendor)。zukaku側の`docs/index.html`は
-これを実際に消費している(zukaku ADR 0012)——`scripts/render/`側は提案
-段階(zukaku ADR 0013、未承認)。
+(ビルド成果物をzukaku側に手動vendor)。zukaku側の`docs/index.html`
+(zukaku ADR 0012)・`scripts/render/`(zukaku ADR 0013)いずれも実際に
+これを消費している——3PR計画は完了。

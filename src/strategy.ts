@@ -79,6 +79,19 @@ function portraitDimsMm(pageSize: PageSize): { width: number; height: number } {
  */
 export function generateStrategyCss(pageSize: PageSize, strategy: PrintStrategy): string {
   const { width: w, height: h } = portraitDimsMm(resolvePageSize(pageSize));
+  // A landscape .print-page's height (the portrait width `w`, e.g. 210mm)
+  // is set fractionally below the physical page's own declared height —
+  // confirmed empirically (dwg7/zukaku ADR 0013, Playwright preferCSSPageSize)
+  // that an element assigned `page: <landscape-name>` whose own height
+  // exactly equals that page's declared height spills a near-empty extra
+  // page (a Chromium print-to-PDF rounding quirk specific to *landscape*
+  // @page geometry — the same-shaped portrait rule never showed this). Only
+  // reproduces when that element is both the very last one on the print
+  // root *and* landscape, so it's easy to miss in testing that never prints
+  // a landscape sheet last. Bisected the minimum safe margin between
+  // 0.1mm (still broke) and 1mm (fixed); 1mm is imperceptible next to the
+  // default 15mm margin.
+  const landscapeHeight = `calc(${w}mm - 1mm)`;
 
   if (strategy === "mixed") {
     return `
@@ -86,7 +99,7 @@ export function generateStrategyCss(pageSize: PageSize, strategy: PrintStrategy)
 @page atlas-landscape { size: ${h}mm ${w}mm; margin: 0; }
 @media print {
   #maplibre-gl-atlas-print-root.strategy-mixed .print-page.portrait-page { page: atlas-portrait; width: ${w}mm; height: ${h}mm; }
-  #maplibre-gl-atlas-print-root.strategy-mixed .print-page.landscape-page { page: atlas-landscape; width: ${h}mm; height: ${w}mm; }
+  #maplibre-gl-atlas-print-root.strategy-mixed .print-page.landscape-page { page: atlas-landscape; width: ${h}mm; height: ${landscapeHeight}; }
   #maplibre-gl-atlas-print-root.strategy-mixed .print-page-inner { position: absolute; inset: 0; }
 }
 `;
@@ -97,7 +110,7 @@ export function generateStrategyCss(pageSize: PageSize, strategy: PrintStrategy)
 @page atlas-base-landscape { size: ${h}mm ${w}mm; margin: 0; }
 @media print {
   #maplibre-gl-atlas-print-root.strategy-rotate.base-portrait .print-page { page: atlas-base-portrait; width: ${w}mm; height: ${h}mm; }
-  #maplibre-gl-atlas-print-root.strategy-rotate.base-landscape .print-page { page: atlas-base-landscape; width: ${h}mm; height: ${w}mm; }
+  #maplibre-gl-atlas-print-root.strategy-rotate.base-landscape .print-page { page: atlas-base-landscape; width: ${h}mm; height: ${landscapeHeight}; }
   #maplibre-gl-atlas-print-root.strategy-rotate .print-page-inner.portrait-page { width: ${w}mm; height: ${h}mm; }
   #maplibre-gl-atlas-print-root.strategy-rotate .print-page-inner.landscape-page { width: ${h}mm; height: ${w}mm; }
   #maplibre-gl-atlas-print-root.strategy-rotate .print-page-inner:not(.rotated) { position: absolute; top: 0; left: 0; }

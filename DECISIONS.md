@@ -165,3 +165,17 @@ zukaku統合の前段として、「Atlasモードのボタンクリック以外
 元々`showButton:false`という形で「入口をどう用意するかは呼び出し側の
 領域」を許容しており、今回の変更はその領域内での明示に留まる。
 → [adr/0002の追記(2026-09-10)](adr/0002-print-review-step.md)
+
+## D13: landscapeシートが最後に来ると空白ページが増える実バグを修正
+
+dwg7/zukaku側のPR 3([zukaku ADR 0013](https://github.com/dwg7/zukaku/blob/main/adr/0013-playwright-pipeline-atlascontrol-migration.md)、
+`scripts/render/`のこのライブラリへの移行)の実機検証中に発見。印刷対象の
+最後のシートがlandscapeだと、内容の無い2ページ目が余分に生成される
+——Chromiumのprint-to-PDFが、`page:`で名前付き`@page`を割り当てた要素の
+高さがその物理ページの宣言高さと厳密に一致すると、ごくわずかに内容を
+次ページへ漏らす(portraitでは再現しない、landscape固有の丸め込み)。
+`src/strategy.ts`でlandscapeページの高さを`calc(<w>mm - 1mm)`にして解消
+(実測で0.1mm不足は再現、1mm不足で解消することを二分探索で確認した数値)。
+Playwright(`preferCSSPageSize:true`)・dwg7/zukakuの`docs/index.html`
+(Print in Browser)の両方で修正を確認した。
+→ [adr/0001の追記(2026-09-10)](adr/0001-window-print-not-jspdf.md)

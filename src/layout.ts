@@ -41,6 +41,16 @@ export function generateBaseCss(): string {
     break-after: page;
     overflow: hidden;
   }
+  /* An atlas with exactly one sheet (no index/overview page, or every other
+     sheet excluded by the caller) would otherwise get a trailing blank page
+     — break-after still forces a break after the last .print-page even
+     though nothing follows it. Confirmed empirically via a headless
+     Chromium print-to-PDF run (dwg7/zukaku's scripts/render/render.js CLI,
+     ADR 0013): a single-sheet atlas came out as a 2-page PDF, page 2 blank.
+     Multi-sheet atlases were unaffected — this only bites the last page. */
+  #maplibre-gl-atlas-print-root .print-page:last-child {
+    break-after: auto;
+  }
 }
 `;
 }

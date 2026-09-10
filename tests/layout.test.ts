@@ -32,6 +32,13 @@ describe("generateBaseCss", () => {
     expect(css).toContain("@media print");
     expect(css).toContain("#maplibre-gl-atlas-print-root { display: block; }");
   });
+
+  it("clears break-after on the last sheet, so a single-sheet atlas doesn't get a trailing blank page", () => {
+    const css = generateBaseCss();
+    expect(css).toContain("break-after: page;");
+    expect(css).toContain("#maplibre-gl-atlas-print-root .print-page:last-child");
+    expect(css).toContain("break-after: auto;");
+  });
 });
 
 describe("generateLayoutCss", () => {

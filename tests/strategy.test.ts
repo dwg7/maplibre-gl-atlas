@@ -96,4 +96,15 @@ describe("generateStrategyCss", () => {
     expect(css).toContain("@page atlas-portrait { size: 215.9mm 279.4mm; margin: 0; }");
     expect(css).toContain("@page atlas-landscape { size: 279.4mm 215.9mm; margin: 0; }");
   });
+
+  it("shaves 1mm off a landscape page's own declared height (both strategies) to avoid a Chromium print-to-PDF quirk that spills a near-blank trailing page (ADR 0013)", () => {
+    const mixed = generateStrategyCss(a4, "mixed");
+    expect(mixed).toContain("strategy-mixed .print-page.landscape-page { page: atlas-landscape; width: 297mm; height: calc(210mm - 1mm); }");
+    // Portrait is unaffected — the bug is landscape-specific.
+    expect(mixed).toContain("strategy-mixed .print-page.portrait-page { page: atlas-portrait; width: 210mm; height: 297mm; }");
+
+    const rotate = generateStrategyCss(a4, "rotate");
+    expect(rotate).toContain("strategy-rotate.base-landscape .print-page { page: atlas-base-landscape; width: 297mm; height: calc(210mm - 1mm); }");
+    expect(rotate).toContain("strategy-rotate.base-portrait .print-page { page: atlas-base-portrait; width: 210mm; height: 297mm; }");
+  });
 });
