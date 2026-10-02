@@ -180,6 +180,16 @@ export interface AtlasControlOptions {
   confirm?: boolean;
 
   /**
+   * Whether each sheet's map is framed by a thin black rule (the "neatline"
+   * that marks exactly where the map area ends). Turn it off when the map
+   * image doesn't always fill its frame — e.g. a `renderScale`d sheet whose
+   * per-axis factors differ is letterboxed (`object-fit: contain`), leaving
+   * a sliver of blank page inside the rule, which can read as sloppy.
+   * @default true
+   */
+  neatline?: boolean;
+
+  /**
    * Whether AtlasControl injects the `<style>` element its print layout
    * needs. Set to `false` if you'd rather own that (e.g. to inline it into
    * a build step) — see layout.ts/strategy.ts for the CSS it would

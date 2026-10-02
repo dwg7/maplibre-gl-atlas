@@ -179,3 +179,14 @@ dwg7/zukaku側のPR 3([zukaku ADR 0013](https://github.com/dwg7/zukaku/blob/main
 Playwright(`preferCSSPageSize:true`)・dwg7/zukakuの`docs/index.html`
 (Print in Browser)の両方で修正を確認した。
 → [adr/0001の追記(2026-09-10)](adr/0001-window-print-not-jspdf.md)
+
+## D14: `renderScale`したシートのスケールバーが潰れる不具合の修正、neatlineを任意に
+
+zukaku側の指摘(サイトで印刷結果を見たhfuさん)で2件。(1)`renderScale`シートの
+スケールバーは、幅を`1/k`に縮める補正のとき`ScaleControl`の`maxWidth`が
+固定100pxだったため、k=4で約20pxとなりラベルが枠からはみ出して潰れた
+→ `maxWidth`を`100 × k`にして縮小後の幅が50〜100pxに収まるようにした。
+(2)地図の黒枠(neatline)を、既定を変えずに`neatline: false`で外せる
+オプションにした(枠を埋めきらない概要ページで、余白を強調して見えるため)。
+READMEには`maplibre-gl.css`が前提であることも明記した。
+→ [adr/0001の追記(2026-10-03)](adr/0001-window-print-not-jspdf.md)

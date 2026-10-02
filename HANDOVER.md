@@ -335,6 +335,18 @@ pypdf/PyMuPDFでページ数・向き・寸法・画像内容を検証。`docs/i
 Print in Browserも同様にPlaywright越しに検証した(実ブラウザでの確認は
 未実施)。
 
+## 2026-10-03: スケールバーの潰れ修正、neatline(黒枠)を任意に
+
+zukakuでhfuさんがサイトの印刷結果を見て見つけた2件への対応(zukaku
+[ADR 0015](https://github.com/dwg7/zukaku/blob/main/adr/0015-print-ui-neatline-and-scale-bar.md))。
+詳細は[adr/0001の追記](adr/0001-window-print-not-jspdf.md)・[DECISIONS.md D14](DECISIONS.md)参照。
+
+- `renderScale`したシートのスケールバーの`maxWidth`を`100 × k`に(`src/snapshot.ts`)。
+  k=4でバーが約20pxに潰れてラベルがはみ出していた。
+- `AtlasControlOptions.neatline`(既定`true`)を追加(`src/layout.ts`・`types.ts`・`index.ts`)。
+- READMEに`maplibre-gl.css`が前提であることを追記。
+- テスト: `tests/layout.test.ts`にneatlineのケースを追加(全48件)。
+
 ## 次にやること
 
 **方針(2026-09-10、hfuさん指示)**: ①「Atlasモードを JS側からenableできる

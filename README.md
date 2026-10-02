@@ -33,7 +33,10 @@ Browser" feature this library was extracted from.
 npm install @dwg7/maplibre-gl-atlas maplibre-gl
 ```
 
-`maplibre-gl` is a peer dependency — bring your own version (v6.x).
+`maplibre-gl` is a peer dependency — bring your own version (v6.x). Load its
+`maplibre-gl.css` too (any page showing a MapLibre map already does): the print
+footer's scale bar is MapLibre's own `ScaleControl` markup, and its bar (borders,
+centered label) is drawn by that stylesheet — without it you get a bare "50 m".
 
 ## Usage
 
@@ -132,6 +135,7 @@ interface AtlasControlOptions {
   strategy?: "auto" | "mixed" | "rotate"; // default "auto"
   showButton?: boolean;      // default true
   confirm?: boolean;         // default true — button opens review() instead of calling print() directly
+  neatline?: boolean;        // default true — thin black rule around each sheet's map area
   injectStyles?: boolean;    // default true
   onBeforePrint?: () => void | Promise<void>;
   onAfterPrint?: () => void | Promise<void>;

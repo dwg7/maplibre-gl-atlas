@@ -81,7 +81,15 @@ export async function snapshotSheet(sheet: AtlasSheet, pageSize: PageSize): Prom
   // Scale bar only, relocated into the print footer by the caller — no
   // compass, since an atlas control has no opinion on whether rotation is
   // locked; that's a caller-level concern (see README).
-  pageMap.addControl(new ScaleControl({ maxWidth: 100, unit: "metric" }), "bottom-left");
+  //
+  // `maxWidth` is in the *staged* canvas's px, and the bar is later divided
+  // by `renderScale`'s factor (below) to match the shrunk-back map image. At
+  // a fixed maxWidth of 100 that left a 4× sheet's bar at ~20 px — narrower
+  // than its own "200 m" label, which then overflowed (dwg7/zukaku ADR 0015).
+  // Asking for `100 × factor` px instead makes the *final* bar land in the
+  // same 50–100 px range an unscaled sheet gets.
+  const scaleFactor = sheet.renderScale ? Math.max(sheet.renderScale.x, sheet.renderScale.y) : 1;
+  pageMap.addControl(new ScaleControl({ maxWidth: 100 * scaleFactor, unit: "metric" }), "bottom-left");
 
   try {
     await new Promise<void>((resolve, reject) => {
@@ -109,7 +117,7 @@ export async function snapshotSheet(sheet: AtlasSheet, pageSize: PageSize): Prom
     const dataUrl = pageMap.getCanvas().toDataURL("image/png");
     const scaleEl = pageMap.getContainer().querySelector<HTMLElement>(".maplibregl-ctrl-scale");
     if (scaleEl && sheet.renderScale) {
-      const factor = Math.max(sheet.renderScale.x, sheet.renderScale.y);
+      const factor = scaleFactor;
       const widthPx = parseFloat(scaleEl.style.width);
       if (!Number.isNaN(widthPx)) {
         scaleEl.style.width = `${widthPx / factor}px`;

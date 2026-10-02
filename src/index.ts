@@ -28,6 +28,7 @@ interface ResolvedOptions extends AtlasControlOptions {
   strategy: NonNullable<AtlasControlOptions["strategy"]>;
   showButton: boolean;
   confirm: boolean;
+  neatline: boolean;
   injectStyles: boolean;
 }
 
@@ -64,6 +65,7 @@ export class AtlasControl implements IControl {
       strategy: options.strategy ?? "auto",
       showButton: options.showButton ?? true,
       confirm: options.confirm ?? true,
+      neatline: options.neatline ?? true,
       injectStyles: options.injectStyles ?? true,
     };
   }
@@ -225,7 +227,7 @@ export class AtlasControl implements IControl {
     const css = [
       generateBaseCss(),
       generateStrategyCss(this.options.pageSize, strategy),
-      generateLayoutCss(this.options.margin),
+      generateLayoutCss(this.options.margin, this.options.neatline),
       generateReviewCss(),
     ].join("\n");
 

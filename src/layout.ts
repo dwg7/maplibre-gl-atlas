@@ -69,11 +69,12 @@ export function generateBaseCss(): string {
  * ratio when `renderScale.x === renderScale.y`; `fill` would visibly warp
  * the map for any other grid shape, `contain` letterboxes instead.
  */
-export function generateLayoutCss(margin?: MarginInput): string {
+export function generateLayoutCss(margin?: MarginInput, neatline = true): string {
   const m = resolveMargin(margin);
   const brandFontMm = m.top / 3;
   const refFontMm = m.top / 3;
   const scaleFontMm = m.bottom / 5;
+  const neatlineRule = neatline ? "border: 0.75pt solid #000;" : "";
 
   return `
 @media print {
@@ -81,7 +82,7 @@ export function generateLayoutCss(margin?: MarginInput): string {
     position: absolute;
     top: ${m.top}mm; left: ${m.left}mm; right: ${m.right}mm; bottom: ${m.bottom}mm;
     box-sizing: border-box;
-    border: 0.75pt solid #000;
+    ${neatlineRule}
     overflow: hidden;
   }
   #maplibre-gl-atlas-print-root .print-page-inner .print-map img {

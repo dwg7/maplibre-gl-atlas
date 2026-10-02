@@ -51,6 +51,16 @@ describe("generateLayoutCss", () => {
     expect(css).toContain("object-fit: contain");
   });
 
+  it("draws the neatline by default, and omits only the border when neatline is false", () => {
+    expect(generateLayoutCss(15)).toContain("border: 0.75pt solid #000;");
+    const bare = generateLayoutCss(15, false);
+    expect(bare).not.toContain("border: 0.75pt");
+    // Everything else about the map box is unchanged.
+    expect(bare).toContain("top: 15mm; left: 15mm; right: 15mm; bottom: 15mm;");
+    expect(bare).toContain("overflow: hidden;");
+    expect(bare).toContain("object-fit: contain");
+  });
+
   it("scales header/footer bands and font sizes for a different margin", () => {
     const css = generateLayoutCss(30);
     expect(css).toContain("top: 30mm; left: 30mm; right: 30mm; bottom: 30mm;");

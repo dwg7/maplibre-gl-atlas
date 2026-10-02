@@ -131,3 +131,31 @@ dwg7/zukaku側の実機検証がこれまでportraitでしか行われておら�
 landscapeシート・2シートとも同じlandscapeのアトラスを修正前後で比較し、
 修正後は正しいページ数になることを確認した。詳細はdwg7/zukakuの
 [ADR 0013追記](https://github.com/dwg7/zukaku/blob/main/adr/0013-playwright-pipeline-atlascontrol-migration.md#追記2026-09-10-実装完了実バグ2件を発見修正)参照。
+
+## 追記(2026-10-03): `renderScale`したシートのスケールバーが潰れる不具合を修正、neatlineを任意に
+
+dwg7/zukakuの[ADR 0015](https://github.com/dwg7/zukaku/blob/main/adr/0015-print-ui-neatline-and-scale-bar.md)
+(hfuさんがサイトで印刷結果を見て指摘した2件)に伴う、ライブラリ側の変更。
+
+**スケールバーの潰れ**: `renderScale`したシートは、スケールバーの幅をスナップ
+ショットと同じ`1/k`に縮める補正をしている(2026-09-08)。しかし
+`ScaleControl`の`maxWidth`は固定の100pxのままで、**ステージ側のpxで**バーの
+長さが選ばれるため、k=4だとバーは縮小後に約20pxとなり、自身のラベル
+(「200 m」)より狭くなって、文字がはみ出して潰れた。zukakuの詳細ブースト
+(ADR 0014)でk=4が詳細ページにも付くようになって顕在化した(概要ページは
+以前からk=2〜3で、約29pxだった)。**`maxWidth`を`100 × k`にして**、縮小
+**後**のバーが未縮小のシートと同じ50〜100pxに収まるようにした
+(`src/snapshot.ts`)。ブースト済みと未ブーストで、同じ距離のバーが同じ幅
+(500 m=54.6px)になることを実測で確認した。
+
+**neatline(地図の黒枠)を任意に**: `AtlasControlOptions.neatline`
+(既定`true`=従来どおり)を追加。`false`で`.print-map`の`border`だけが
+消える。スナップショットが枠を埋めきらないとき(軸ごとの`renderScale`が
+異なる概要ページは`object-fit: contain`で上下に余白が出る)、枠線が
+その余白を「地図範囲とのズレ」として強調して見えるため。既定を変えず
+オプションにしたのは、枠線が「地図範囲の終端を示す」というzukaku
+ADR 0007以来の設計意図を、他の呼び出し側のために残すため。
+
+**README**: `maplibre-gl.css`の読み込みが前提であることを明記した——
+スケールバーはMapLibre自身の`ScaleControl`のマークアップで、バーの罫線と
+ラベルの中央寄せはそのCSSが描く。
